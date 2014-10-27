@@ -9,3 +9,5 @@ PLLJ_PLLSPE_INFO.txt
 *.smsg
 *.sof
 *.summary
+*.qdf
+*.qws
