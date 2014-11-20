@@ -327,10 +327,10 @@ architecture rtl of chameleon_io is
 	signal c64_kb_we : std_logic := '1';
 	signal c64_kb_a : unsigned(15 downto 0) := (others => '0');
 	signal c64_kb_q : unsigned(7 downto 0) := (others => '1');
-	signal c64_joystick1 : unsigned(4 downto 0);
-	signal c64_joystick2 : unsigned(4 downto 0);
-	signal c64_joystick3 : unsigned(4 downto 0);
-	signal c64_joystick4 : unsigned(4 downto 0);
+	signal c64_joystick1 : unsigned(5 downto 0);
+	signal c64_joystick2 : unsigned(5 downto 0);
+	signal c64_joystick3 : unsigned(5 downto 0);
+	signal c64_joystick4 : unsigned(5 downto 0);
 	signal c64_keys : unsigned(63 downto 0);
 
 -- CDTV remote
@@ -401,10 +401,10 @@ begin
 	--
 	ir <= ir_reg;
 	--
-	joystick1 <= docking_joystick1 and ir_joystick1 and ("1" & c64_joystick1);
-	joystick2 <= docking_joystick2 and ir_joystick2 and ("1" & c64_joystick2);
-	joystick3 <= docking_joystick3 and ("1" & c64_joystick3);
-	joystick4 <= docking_joystick4 and ("1" & c64_joystick4);
+	joystick1 <= docking_joystick1 and ir_joystick1 and (c64_joystick1);
+	joystick2 <= docking_joystick2 and ir_joystick2 and (c64_joystick2);
+	joystick3 <= docking_joystick3 and (c64_joystick3);
+	joystick4 <= docking_joystick4 and (c64_joystick4);
 	keys <= docking_keys and c64_keys and ir_keys;
 
 -- -----------------------------------------------------------------------
