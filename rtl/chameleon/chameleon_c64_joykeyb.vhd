@@ -58,10 +58,10 @@ entity chameleon_c64_joykeyb is
 		d : in unsigned(7 downto 0);
 		q : out unsigned(7 downto 0);
 		
-		joystick1 : out unsigned(4 downto 0);
-		joystick2 : out unsigned(4 downto 0);
-		joystick3 : out unsigned(4 downto 0);
-		joystick4 : out unsigned(4 downto 0);
+		joystick1 : out unsigned(5 downto 0);
+		joystick2 : out unsigned(5 downto 0);
+		joystick3 : out unsigned(5 downto 0);
+		joystick4 : out unsigned(5 downto 0);
 		--  0 = col0, row0
 		--  1 = col1, row0
 		--  8 = col0, row1
@@ -77,12 +77,15 @@ architecture rtl of chameleon_c64_joykeyb is
 		INIT_RESET, INIT_DISABLE_VIC, INIT_DISABLE_MOB,
 		INIT_CIA1_A, INIT_CIA1_B, INIT_CIA2_B, --INIT_CIA2_A, ,
 		SET_COL, READ_ROW, STORE_ROW, SET_NOCOL,
+		READ_JOY_EXTRA1, READ_JOY_EXTRA2, READ_JOY_EXTRA3,
 		READ_JOY1, STORE_JOY1, STORE_JOY2,
 		READ_JOY34, STORE_JOY34);
 	signal state : state_t := INIT_RESET;
 	signal req_reg : std_logic := '0';
 	signal joy34_flag : std_logic := '0';
 	signal cnt : unsigned(3 downto 0) := (others => '0');
+	signal pot_flag : std_logic := '0';
+	signal potcnt : unsigned(9 downto 0) := (others => '0');
 	signal col : integer range 0 to 7 := 0;
 	signal keys_reg : unsigned(63 downto 0) := (others => '1');
 begin
@@ -177,9 +180,46 @@ begin
 				when SET_NOCOL =>
 					we <= '1';
 					a <= X"DC00";
-					q <= X"FF";
+					if pot_flag = '0' then
+						q <= X"BF";  -- paddle port 1
+					else
+						q <= X"7F";  -- paddle port 2
+					end if;
 					req_reg <= not req_reg;
 					cnt <= (others => '1');
+					potcnt <= potcnt + 1;
+					if potcnt(9) = '1' then
+						potcnt <= "0000000000";
+						pot_flag <= not pot_flag;
+						state <= READ_JOY_EXTRA1;
+				   else
+						state <= SET_NOCOL;	-- wait
+					end if;
+				when READ_JOY_EXTRA1 =>
+					we <= '0';
+					a <= X"D419";	-- POTX
+					req_reg <= not req_reg;
+					state <= READ_JOY_EXTRA2;
+				when READ_JOY_EXTRA2 =>
+					we <= '0';
+					a <= X"D41A";  -- POTY
+					req_reg <= not req_reg;
+					if pot_flag = '0' then
+						joystick1(5) <= d(7);  -- paddle port 1
+					else
+						joystick2(5) <= d(7);  -- paddle port 2
+					end if;
+					state <= READ_JOY_EXTRA3;
+				when READ_JOY_EXTRA3 =>
+					we <= '1';
+					a <= X"DC00";
+					q <= X"FF";
+					req_reg <= not req_reg;
+					if pot_flag = '0' then
+						joystick3(5) <= d(7);  -- paddle port 1
+					else
+						joystick4(5) <= d(7);  -- paddle port 2
+					end if;
 					state <= READ_JOY1;
 				when READ_JOY1 =>
 					-- read joystick port 1
@@ -192,10 +232,10 @@ begin
 					we <= '0';
 					a <= X"DC00";
 					req_reg <= not req_reg;
-					joystick1 <= d(4 downto 0);
+					joystick1(4 downto 0) <= d(4 downto 0);
 					state <= STORE_JOY2;
 				when STORE_JOY2 =>
-					joystick2 <= d(4 downto 0);
+					joystick2(4 downto 0) <= d(4 downto 0);
 					state <= SET_COL;
 					if enable_4player then
 						state <= READ_JOY34;
