@@ -29,7 +29,7 @@
 -- clk             - system clock
 -- ena_1mhz        - Enable must be '1' one clk cycle each 1 Mhz.
 --
--- joystick*       - Joystick outputs (fire1, right, left, down, up) low active
+-- joystick*       - Joystick outputs (fire2, fire1, right, left, down, up) low active
 -- keys            - State of the keyboard (low is pressed)
 -- -----------------------------------------------------------------------
 
@@ -192,7 +192,7 @@ begin
 						potcnt <= "0000000000";
 						pot_flag <= not pot_flag;
 						state <= READ_JOY_EXTRA1;
-				   else
+					else
 						state <= SET_NOCOL;	-- wait
 					end if;
 				when READ_JOY_EXTRA1 =>
