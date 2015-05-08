@@ -78,6 +78,9 @@
 -- phi_post_3      - Triggers two cycles phi changed
 -- phi_post_4      - Triggers three cycles phi changed
 --
+-- c64_reset       - When set the reset is pending (line is pulled low) on the cartridge port.
+--                   As "reset_ext" is masked to prevent endless reset.
+--                   This signal can be used for RRNET pull-up detection instead. 
 -- c64_irq_n       - Status of the C64 IRQ line (cartridge mode only)
 -- c64_nmi_n       - Status of the C64 NMI line
 -- c64_ba          - status of the C64 BA line
@@ -179,6 +182,7 @@ entity chameleon_io is
 		phi_post_4 : out std_logic;
 
 -- C64 bus
+		c64_reset : out std_logic;
 		c64_irq_n : out std_logic;
 		c64_nmi_n : out std_logic;
 		c64_ba : out std_logic;
@@ -374,6 +378,7 @@ architecture rtl of chameleon_io is
 -- MMC
 	signal mmc_state : unsigned(5 downto 0) := (others => '0');
 	signal spi_q_reg : unsigned(7 downto 0) := (others => '1');
+	signal spi_ack_reg : std_logic := '0';
 	signal spi_run : std_logic := '0';
 	signal spi_sample : std_logic := '0';
 	signal mmc_shift_req : std_logic;
@@ -394,9 +399,11 @@ begin
 	phi_end_0 <= end_of_phi_0;
 	phi_end_1 <= end_of_phi_1;
 	--
+	c64_reset <= c64_reset_reg;
 	c64_ba <= c64_ba_reg;
 	c64_q <= c64_data_reg;
 	--
+	spi_ack <= spi_ack_reg;
 	spi_q <= spi_q_reg;
 	--
 	ir <= ir_reg;
@@ -729,6 +736,9 @@ begin
 				end case;
 				if spi_sample = '1' then
 					spi_q_reg <= spi_q_reg(6 downto 0) & spi_miso;
+					if mmc_state(5) = '0' then
+						spi_ack_reg <= spi_run;
+					end if;
 				end if;
 			end if;
 			iec_dat_in <= iec_dat_reg;
@@ -845,9 +855,9 @@ begin
 				when MUX_NMIIRQ1 | MUX_NMIIRQ2=>
 					mux_d_reg <= "110" & (not reset);
 					mux_reg <= X"6";
-					if docking_station_loc = '1' then
-						mux_d_reg(2) <= docking_irq;
-					end if;
+--					if docking_station_loc = '1' then
+--						mux_d_reg(2) <= docking_irq;
+--					end if;
 --
 -- IEC
 				when MUX_IEC1 | MUX_IEC2 | MUX_IEC3 | MUX_IEC4 =>
@@ -992,15 +1002,6 @@ begin
 				when others =>
 					null;
 				end case;
-			end if;
-		end if;
-	end process;
-
-	process(clk_mux)
-	begin
-		if rising_edge(clk_mux) then
-			if mmc_state(5) = '0' then
-				spi_ack <= spi_run;
 			end if;
 		end if;
 	end process;
