@@ -88,7 +88,7 @@ architecture rtl of video_vga_master is
 	signal xCounter : unsigned(11 downto 0) := (others => '0');
 	signal yCounter : unsigned(11 downto 0) := (others => '0');
 	signal xCounterInc : unsigned(11 downto 0) := (others => '0');
-	signal yCounterIncr : unsigned(11 downto 0) := (others => '0');
+	signal yCounterInc : unsigned(11 downto 0) := (others => '0');
 	signal newPixel : std_logic := '0';
 	
 	signal hSync_reg : std_logic;
@@ -113,6 +113,7 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
+			yCounterInc <= yCounter + 1;
 			pixel_reg <= '0';
 			line_reg <= '0';
 			frame_reg <= '0';
@@ -124,14 +125,12 @@ begin
 					line_reg <= '1';
 					xCounter <= (others => '0');
 					
-					if (genlock_hold = '0') or (yCounterIncr < ySyncFr) then
-						yCounter <= yCounterIncr;
-						yCounterIncr <= yCounterIncr + 1;
+					if (genlock_hold = '0') or (yCounterInc < ySyncFr) then
+						yCounter <= yCounterInc;
 					end if;
-					if yCounterIncr = ySize then
+					if yCounterInc = ySize then
 						frame_reg <= '1';
 						yCounter <= (others => '0');
-						yCounterIncr <= to_unsigned(1, yCounterIncr'length);
 					end if;
 				end if;
 			end if;
