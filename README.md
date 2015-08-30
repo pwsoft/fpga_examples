@@ -39,9 +39,9 @@ Various vhdl files to be reused in other designs.
     * gen_register.vhd  Register example.
     * gen_reset.vhd  Power-on reset circuit with manual reset button input.
     * gen_usart.vhd  Synchronous serial receiver/transmitter
-* rtl/ps2. File for PS/2 keyboard and PS/2 mice.
+* rtl/ps2. Design files to add support for PS/2 keyboards and PS/2 mice.
     * io_ps2_com.vhd  Lowlevel PS/2 driver. Allowes receiving and sending bytes to PS/2 devices.
-    * io_ps2_keyboard.vhd  PS/2 keyboard interface (uses io_ps2_com). Received scancodes and can control the LEDs.
+    * io_ps2_keyboard.vhd  PS/2 keyboard interface (uses io_ps2_com). Receives scancodes and can control the LEDs.
     * io_ps2_mouse.vhd   PS/2 mouse interface (uses io_ps2_com). Gets position and button information from PS/2 mice.
 * rtl/video. Support files for processing video.
     * video_vga_master.vhd  VGA sync. and timing generator.
