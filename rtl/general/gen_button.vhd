@@ -88,7 +88,7 @@ begin
 				elsif cnt >= short_press_ms then
 					short_reg <= '1';
 				end if;
-				cnt <= (others => '0');
+				cnt <= 0;
 			end if;
 		end if;
 	end process;
