@@ -34,6 +34,8 @@ Various vhdl files to be reused in other designs.
     * gen_counter.vhd  Up/Down counter example.
     * gen_counter_signed.vhd  Up/Down counter that outputs signed value.
     * gen_dualram.vhd
+    * gen_fifo.vhd  Single clock domain FIFO buffer, with configurable width and depth.
+    * gen_filter.vhd  Signal filter to detect stable digital signal.
     * gen_lfsr.vhd  Linear Feedback Shift Register. Generates pseudo random numbers.
     * gen_pipeline.vhd  Configurable pipeline building block.
     * gen_register.vhd  Register example.
