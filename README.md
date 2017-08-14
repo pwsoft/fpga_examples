@@ -47,4 +47,5 @@ Various vhdl files to be reused in other designs.
     * io_ps2_mouse.vhd   PS/2 mouse interface (uses io_ps2_com). Gets position and button information from PS/2 mice.
 * rtl/video. Support files for processing video.
     * video_vga_master.vhd  VGA sync. and timing generator.
+	* iq_mixer              IQ mixer for PAL/NTSC video. Requires clock exactly 16x faster as color-burst frequency.
 
