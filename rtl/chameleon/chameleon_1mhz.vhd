@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2011 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2017 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -26,8 +26,11 @@
 -- 1 Mhz clock source
 --
 -- -----------------------------------------------------------------------
--- clk      - system clock input
--- ena_1mhz - 1 Mhz output. Signal is one cycle '1' each micro-second.
+-- clk_ticks_per_usec - Specifies clockspeed of clk in MHz, calibrates timer.
+-- -----------------------------------------------------------------------
+-- clk        - system clock input
+-- ena_1mhz   - 1 Mhz output. Signal is one cycle '1' each micro-second.
+-- ena_1mhz_2 - One cycle trigger output that shifted by 0.5 micro-second against ena_1mhz
 -- -----------------------------------------------------------------------
 
 library IEEE;
@@ -38,7 +41,6 @@ use IEEE.numeric_std.all;
 
 entity chameleon_1mhz is
 	generic (
-		-- Timer calibration. Clock speed in Mhz.
 		clk_ticks_per_usec : integer
 	);
 	port (

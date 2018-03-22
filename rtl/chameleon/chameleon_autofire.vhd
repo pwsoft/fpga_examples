@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2010 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2017 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -25,6 +25,14 @@
 --
 -- Joystick autofire logic
 --
+-- -----------------------------------------------------------------------
+-- autofire_period - Number of micro-seconds between toggling of output.
+--                   Autofire rate in Hz is 1000000/(2*autofire_period)
+-- -----------------------------------------------------------------------
+-- clk        - system clock input
+-- ena_1mhz   - Enable must be high for one clk cycle each microsecond
+-- button_n   - Fire button input from joystick (low active)
+-- autofire_n - Auto-fire outout (low active)
 -- -----------------------------------------------------------------------
 
 library IEEE;

@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2011 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2017 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -27,8 +27,10 @@
 --
 -- -----------------------------------------------------------------------
 -- clk         - system clock input
--- ena_1mhz    - Enable must be '1' one clk cycle each 1 Mhz.
+-- ena_1mhz    - Enable must be high for one clk cycle each microsecond.
 -- ir          - signal from infra-red detector.
+--
+-- trigger     - pulsed one clk high when new code is received from the CDTV remote.
 --
 -- key_1       - high when "1" is pressed on remote
 -- key_2       - high when "2" is pressed on remote
@@ -55,7 +57,7 @@
 --               This output is active when remote is in MOUSE mode.
 -- joystick_b  - second joystick emulation output (bits are '1' when idle).
 --               This output is active when remote is in JOY mode.
--- debug_code  - Current ir code active
+-- debug_code  - Last received raw code from the CDTV remote
 -- -----------------------------------------------------------------------
 
 library IEEE;

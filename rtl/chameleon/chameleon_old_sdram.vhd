@@ -265,7 +265,9 @@ begin
 -- -----------------------------------------------------------------------
 -- State machine
 -- -----------------------------------------------------------------------
-	process(currentPort, cpu6510_req, cpu6510_ack_reg, cache_req, cache1_ack_reg)
+	process(currentPort, cpu6510_req, cpu6510_ack_reg, cache_req, cache1_ack_reg, 
+			reserve, cache_a, cache_d, cache_burst, cache_we, vid0_req,
+			vid0_ack_reg, vid0_addr)
 	begin
 		nextRamPort <= PORT_NONE;
 		nextRamBank <= "00";

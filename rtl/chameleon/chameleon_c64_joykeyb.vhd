@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2013 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2017 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -28,6 +28,17 @@
 -- -----------------------------------------------------------------------
 -- clk             - system clock
 -- ena_1mhz        - Enable must be '1' one clk cycle each 1 Mhz.
+-- no_clock        - High when there is no phi-2 clock, the joystick and keyboard
+--                   information will be unavailable.
+-- reset           - system reset
+--
+-- ba              - Status of the BA line on the cartridge port
+-- req             - Toggles to perform a C64 access
+-- ack             - Acknoledge of the C64 access, becomes equal to req when complete.
+-- we              - Low performs read access, high performs write access
+-- a               - Address for C64 access
+-- d               - Data input from the C64 cartridge port
+-- q               - Data output for write accesses
 --
 -- joystick*       - Joystick outputs (fire2, fire1, right, left, down, up) low active
 -- keys            - State of the keyboard (low is pressed)
@@ -48,7 +59,7 @@ entity chameleon_c64_joykeyb is
 		ena_1mhz : in std_logic;
 		no_clock : in std_logic;
 		reset : in std_logic;
-		
+
 		-- To C64 cartridge logic
 		ba : in std_logic;
 		req : out std_logic;
@@ -57,7 +68,7 @@ entity chameleon_c64_joykeyb is
 		a : out unsigned(15 downto 0);
 		d : in unsigned(7 downto 0);
 		q : out unsigned(7 downto 0);
-		
+
 		joystick1 : out unsigned(5 downto 0);
 		joystick2 : out unsigned(5 downto 0);
 		joystick3 : out unsigned(5 downto 0);

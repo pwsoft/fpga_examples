@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2011 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2017 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -24,7 +24,43 @@
 -- -----------------------------------------------------------------------
 --
 -- buttons
+-- Decodes the action of the three buttons on the Chameleon cartridge.
+-- Generates trigger signals depending on configuration and the duration a
+-- button is pressed down.
 --
+-- -----------------------------------------------------------------------
+-- shortpress_ms  - Length of a short keypress in milliseconds
+--                  A button pressed shorter is ignored (debounce).
+-- longpress_ms   - Length of a long keypress in milliseconds
+--                  A button pressed longer is considered a long press.
+-- -----------------------------------------------------------------------
+-- clk               - system clock input
+-- ena_1khz          - Enable must be high for one clk cycle each millisecond
+-- menu_mode         - High when menu mode is active
+--                     Most button functions are disabled inside the menu.
+-- reset_last_button - Reset last_button output
+-- last_button       - Reports last pressed key
+--                     Allows menu-system to reuse the buttons by decoding in software
+-- button_l          - Left button input (for physical button)
+-- button_m          - Middle button input (for physical button)
+-- button_r          - Right button input (for physical button)
+-- button_l_2        - Left button input (internal from PS/2 or CDTV remote)
+-- button_m_2        - Middle button input (internal from PS/2 or CDTV remote)
+-- button_r_2        - Right button input (internal from PS/2 or CDTV remote)
+-- button_config     - button configuration input
+--                     Refer to "The Programmers Manual" for available settings
+--
+-- reset             - Reset output
+-- boot              - Request for reboot of the system (long reset)
+-- freeze            - cartridge freezer request
+-- menu              - menu freezer request
+-- turbo_toggle      - CPU turbo toggle request
+-- disk8_next        - select next disk image for emulated drive 8
+-- disk8_first       - select first disk image for emulated drive 8
+-- disk9_next        - select next disk image for emulated drive 9
+-- disk9_first       - select first disk image for emulated drive 9
+-- cart_toggle       - Toggle cartridge on/off (some cartridges have an on/off switch)
+-- cart_prg          - Switch cartridge in programming mode (expert cartridge)
 -- -----------------------------------------------------------------------
 
 library IEEE;
@@ -40,7 +76,7 @@ entity chameleon_buttons is
 	);
 	port (
 		clk : in std_logic;
-		clk_1khz : in std_logic;
+		ena_1khz : in std_logic;
 		menu_mode : in std_logic;
 		
 		reset_last_button : in std_logic;
@@ -144,7 +180,7 @@ begin
 			button_l_short <= '0';
 			if button_l_loc = '1' then
 				if button_l_cnt /= longpress_ms then
-					if clk_1khz = '1' then
+					if ena_1khz = '1' then
 						button_l_cnt <= button_l_cnt + 1;
 					end if;
 					if button_l_cnt > shortpress_ms then
@@ -166,7 +202,7 @@ begin
 			button_m_short <= '0';
 			if button_m_loc = '1' then
 				if button_m_cnt /= longpress_ms then
-					if clk_1khz = '1' then
+					if ena_1khz = '1' then
 						button_m_cnt <= button_m_cnt + 1;
 					end if;
 					if button_m_cnt > shortpress_ms then
@@ -188,7 +224,7 @@ begin
 			button_r_short <= '0';
 			if button_r_loc = '1' then
 				if button_r_cnt /= longpress_ms then
-					if clk_1khz = '1' then
+					if ena_1khz = '1' then
 						button_r_cnt <= button_r_cnt + 1;
 					end if;
 					if button_r_cnt > shortpress_ms then
