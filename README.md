@@ -28,6 +28,8 @@ Various vhdl files to be reused in other designs.
     * chameleon_phi_clock_*.vhd  C64 Phi2-clock regeneration and divider. (used by chameleon_io to sync. to PHI2 signal)
     * chameleon_spi_flash.vhd  Read data from on of the slots in the 16 Mbyte SPI serial flash.
     * chameleon_usb.vhd  Logic to allow reading and writing memory through the usb port with chaco. Also supplies the current flash slot.
+	* chameleon2_io_ps2iec    Read PS/2 and IEC data from the input multiplexer
+	* chameleon2_io_shiftreg  Statemachine to control the output shiftregister for reset lines, PS/2 and LEDs.
 * rtl/general. Varios support and example files.
     * gen_bin2gray.vhd  Binary to gray converter.
     * gen_button.vhd  Button debouncer
