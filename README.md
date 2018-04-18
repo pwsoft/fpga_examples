@@ -48,6 +48,10 @@ Various vhdl files to be reused in other designs.
     * io_ps2_com.vhd  Lowlevel PS/2 driver. Allowes receiving and sending bytes to PS/2 devices.
     * io_ps2_keyboard.vhd  PS/2 keyboard interface (uses io_ps2_com). Receives scancodes and can control the LEDs.
     * io_ps2_mouse.vhd   PS/2 mouse interface (uses io_ps2_com). Gets position and button information from PS/2 mice.
+* rtl/ttl. Files for emulating standard logic chips like SN74xx and CD40xx series in realtime on FPGAs.
+    * ttl_74??.vhd   VHDL implementation of various standard logic chips from the 74HCT series.
+    * ttl_latency  Lowlevel building block to emulate propagation delays in chips (as an bonus also pipelines designs for easier mapping).
+    * ttl_pkg  Package that defines the ttl_t type. A new logic signal type that handles more states as just zero and one.
 * rtl/video. Support files for processing video.
     * video_vga_master.vhd  VGA sync. and timing generator.
 	* iq_mixer              IQ mixer for PAL/NTSC video. Requires clock exactly 16x faster as color-burst frequency.
