@@ -70,6 +70,16 @@ begin
 			p1 => std2ttl(cnt_reg(3)), p2 => std2ttl(cnt_reg(4)), p13 => std2ttl(cnt_reg(5)), p12 => out7411,
 			p3 => VCC, p4 => VCC, p5 => VCC, p9 => VCC, p10 => VCC, p11 => VCC);
 
+	ttl_7474_blk : block
+		signal q : ttl_t;
+		signal nq : ttl_t;
+	begin
+		ttl_7474_inst : entity work.ttl_7474
+			port map (emuclk => clk,
+				p1 => VCC, p2 => nq, p3 => std2ttl(cnt_reg(3)), p4 => VCC, p5 => q, p6 => nq,
+				p10 => VCC, p11 => VCC, p12 => VCC, p13 => VCC);
+	end block;
+
 	ttl_7485_inst : entity work.ttl_7485
 		port map (emuclk => clk,
 			p2 => std2ttl(cnt_reg(3)), p3 => std2ttl(cnt_reg(4)), p4 => std2ttl(cnt_reg(5)),
@@ -92,15 +102,11 @@ begin
 			p15 => std2ttl(row(4)), p14 => std2ttl(row(5)), p13 => std2ttl(row(6)), p12 => std2ttl(row(7)),
 			p7 => std2ttl(cnt_reg(3)), p11 => std2ttl(cnt_reg(4)), p10 => std2ttl(cnt_reg(5)), p9 => std2ttl(cnt_reg(6)));
 
-	ttl_7474_blk : block
-		signal q : ttl_t;
-		signal nq : ttl_t;
-	begin
-		ttl_7474_inst : entity work.ttl_7474
-			port map (emuclk => clk,
-				p1 => VCC, p2 => nq, p3 => std2ttl(cnt_reg(3)), p4 => VCC, p5 => q, p6 => nq,
-				p10 => VCC, p11 => VCC, p12 => VCC, p13 => VCC);
-	end block;
+	ttl_74163_inst : entity work.ttl_74163
+		port map (emuclk => clk,
+			p1 => std2ttl(cnt_reg(8)), p2 => std2ttl(cnt_reg(3)),
+			p3 => ZERO, p4 => ZERO, p5 => ZERO, p6 => ZERO, p7 => ONE, p9 => ONE, p10 => ONE);
+
 
 
 	t_or <= a or b;
