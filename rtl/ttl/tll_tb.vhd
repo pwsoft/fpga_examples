@@ -107,6 +107,10 @@ begin
 			p1 => std2ttl(cnt_reg(8)), p2 => std2ttl(cnt_reg(3)),
 			p3 => ZERO, p4 => ZERO, p5 => ZERO, p6 => ZERO, p7 => ONE, p9 => ONE, p10 => ONE);
 
+	ttl_74166_inst : entity work.ttl_74166
+		port map (emuclk => clk,
+			p7 => std2ttl(cnt_reg(3)), p6 => ZERO, p15 => std2ttl(cnt_reg(9)), p9 => std2ttl(cnt_reg(10)), p1 => ONE,
+			p2 => ZERO, p3 => ONE, p4 => ONE, p5 => ZERO, p10 => ZERO, p11 => ONE, P12 => ZERO, p14 => ONE);
 
 
 	t_or <= a or b;
