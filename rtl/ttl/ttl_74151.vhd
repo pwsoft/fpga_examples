@@ -61,8 +61,10 @@ architecture rtl of ttl_74151 is
 	signal p6_loc : ttl_t;
 begin
 	p5_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p5_loc, q => p5);
 	p6_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p6_loc, q => p6);
 
 

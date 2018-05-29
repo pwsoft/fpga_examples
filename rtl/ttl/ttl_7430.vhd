@@ -53,6 +53,7 @@ architecture rtl of ttl_7430 is
 	signal p8_loc : ttl_t;
 begin
 	p8_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p8_loc, q => p8);
 
 	p8_loc <= not(p1 and p2 and p3 and p4 and p5 and p6 and p11 and p12);

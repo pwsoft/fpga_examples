@@ -63,12 +63,16 @@ architecture rtl of ttl_7408 is
 	signal p11_loc : ttl_t;
 begin
 	p3_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p3_loc, q => p3);
 	p6_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p6_loc, q => p6);
 	p8_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p8_loc, q => p8);
 	p11_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p11_loc, q => p11);
 
 	p3_loc <= p1 and p2;

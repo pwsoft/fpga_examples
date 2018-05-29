@@ -67,6 +67,7 @@ architecture rtl of ttl_74166 is
 	signal shift_reg : unsigned(7 downto 0) := (others => '0');
 begin
 	p13_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p13_loc, q => p13);
 
 	cp <= ttl2std(p7);

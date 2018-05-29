@@ -66,20 +66,28 @@ architecture rtl of ttl_74139 is
 	signal p12_loc : ttl_t;
 begin
 	p4_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p4_loc, q => p4);
 	p5_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p5_loc, q => p5);
 	p6_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p6_loc, q => p6);
 	p7_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p7_loc, q => p7);
 	p9_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p9_loc, q => p9);
 	p10_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p10_loc, q => p10);
 	p11_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p11_loc, q => p11);
 	p12_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p12_loc, q => p12);
 
 	p4_loc <= p1 or p2 or p3;

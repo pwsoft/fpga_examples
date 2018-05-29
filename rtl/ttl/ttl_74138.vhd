@@ -67,20 +67,28 @@ architecture rtl of ttl_74138 is
 	signal p15_loc : ttl_t;
 begin
 	p7_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p7_loc, q => p7);
 	p9_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p9_loc, q => p9);
 	p10_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p10_loc, q => p10);
 	p11_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p11_loc, q => p11);
 	p12_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p12_loc, q => p12);
 	p13_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p13_loc, q => p13);
 	p14_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p14_loc, q => p14);
 	p15_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p15_loc, q => p15);
 
 	p7_loc <= ZERO when is_high(p1) and is_high(p2) and is_high(p3) and is_low(p4) and is_low(p5) and is_high(p6) else ONE;

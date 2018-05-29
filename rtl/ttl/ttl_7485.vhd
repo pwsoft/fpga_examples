@@ -67,10 +67,13 @@ architecture rtl of ttl_7485 is
 	signal b : unsigned(3 downto 0);
 begin
 	p5_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p5_loc, q => p5);
 	p6_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p6_loc, q => p6);
 	p7_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p7_loc, q => p7);
 
 	a <= ttl2std(p15) & ttl2std(p13) & ttl2std(p12) & ttl2std(p10);

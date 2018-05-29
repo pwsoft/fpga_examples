@@ -68,14 +68,19 @@ architecture rtl of ttl_74161 is
 	signal cp_dly : std_logic := '0';
 begin
 	p11_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => q3_reg, q => p11);
 	p12_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => q2_reg, q => p12);
 	p13_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => q1_reg, q => p13);
 	p14_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => q0_reg, q => p14);
 	p15_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => tc_reg, q => p15);
 
 	cp <= ttl2std(p2);

@@ -65,12 +65,16 @@ architecture rtl of ttl_7474 is
 	signal cp2_dly : std_logic;
 begin
 	p5_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p5_loc, q => p5);
 	p6_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p6_loc, q => p6);
 	p8_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p8_loc, q => p8);
 	p9_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p9_loc, q => p9);
 
 	cp1 <= ttl2std(p3);

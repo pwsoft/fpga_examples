@@ -62,16 +62,22 @@ architecture rtl of ttl_7404 is
 	signal p12_loc : ttl_t;
 begin
 	p2_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p2_loc, q => p2);
 	p4_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p4_loc, q => p4);
 	p6_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p6_loc, q => p6);
 	p8_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p8_loc, q => p8);
 	p10_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p10_loc, q => p10);
 	p12_latency_inst : entity work.ttl_latency
+		generic map (latency => latency)
 		port map (clk => emuclk, d => p12_loc, q => p12);
 
 	p2_loc <= not(p1);
