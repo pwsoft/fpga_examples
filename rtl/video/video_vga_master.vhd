@@ -170,10 +170,12 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			vSync_reg <= not vSyncPol;
-			if yCounter >= ySyncFr
-			and yCounter < ySyncTo then
-				vSync_reg <= vSyncPol;
+			if xCounter = xSyncFr then
+				vSync_reg <= not vSyncPol;
+				if yCounter >= ySyncFr
+				and yCounter < ySyncTo then
+					vSync_reg <= vSyncPol;
+				end if;
 			end if;
 		end if;
 	end process;
