@@ -68,7 +68,7 @@ entity chameleon2_io_shiftreg is
 end entity;
 
 architecture rtl of chameleon2_io_shiftreg is
-	signal state_reg : unsigned(5 downto 0) := "000000";
+	signal state_reg : unsigned(6 downto 0) := (others => '0');
 	signal clk_reg : std_logic := '0';
 	signal dat_reg : std_logic := '0';
 	signal rclk_reg : std_logic := '1';
@@ -81,19 +81,19 @@ begin
 	begin
 		if rising_edge(clk) then
 			state_reg <= state_reg + 1;
-			clk_reg <= state_reg(2);
-			rclk_reg <= '1';
-			case state_reg(5 downto 3) is
-			when "000" => dat_reg <= reset_c64;
-			when "001" => dat_reg <= reset_iec;
-			when "010" => dat_reg <= not ps2_mouse_clk;
-			when "011" => dat_reg <= not ps2_mouse_dat;
-			when "100" => dat_reg <= not ps2_keyboard_clk;
-			when "101" => dat_reg <= not ps2_keyboard_dat;
-			when "110" => dat_reg <= not led_green;
-			when others =>
-				dat_reg <= not led_red;
-				rclk_reg <= '0';
+			clk_reg <= state_reg(2) and (not state_reg(6));
+			rclk_reg <= state_reg(2) and state_reg(6);
+			case state_reg(6 downto 3) is
+			when "0000" => dat_reg <= reset_c64;
+			when "0001" => dat_reg <= reset_iec;
+			when "0010" => dat_reg <= not ps2_mouse_clk;
+			when "0011" => dat_reg <= not ps2_mouse_dat;
+			when "0100" => dat_reg <= not ps2_keyboard_clk;
+			when "0101" => dat_reg <= not ps2_keyboard_dat;
+			when "0110" => dat_reg <= not led_green;
+			when "0111" => dat_reg <= not led_red;
+			when "1000" => null;
+			when others => state_reg <= (others => '0');
 			end case;
 		end if;
 	end process;

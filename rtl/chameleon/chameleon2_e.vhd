@@ -34,101 +34,101 @@ use ieee.numeric_std.all;
 entity chameleon2 is
 	port (
 -- Clocks
-		signal clk8m : in std_logic;
-		signal phi2_in : in std_logic;
-		signal dotclk_in : in std_logic;
+		clk50m : in std_logic;
+		phi2_in : in std_logic;
+		dotclk_in : in std_logic;
 
 -- Buttons
-		signal usart_cts : in std_logic;
-		signal reset_btn : in std_logic;
-		signal freeze_btn : in std_logic;
+		usart_cts : in std_logic;  -- Left
+		freeze_btn : in std_logic; -- Middle
+		reset_btn : in std_logic;  -- Right
 
 -- PS/2, IEC, LEDs
-		signal iec_present : in std_logic;
+		iec_present : in std_logic;
 
-		signal ps2iec_sel : out std_logic;
-		signal ps2iec : in unsigned(3 downto 0);
+		ps2iec_sel : out std_logic;
+		ps2iec : in unsigned(3 downto 0);
 
-		signal ser_out_clk : out std_logic;
-		signal ser_out_dat : out std_logic;
-		signal ser_out_rclk : out std_logic;
+		ser_out_clk : out std_logic;
+		ser_out_dat : out std_logic;
+		ser_out_rclk : out std_logic;
 
-		signal iec_clk_out : out std_logic;
-		signal iec_srq_out : out std_logic;
-		signal iec_atn_out : out std_logic;
-		signal iec_dat_out : out std_logic;
+		iec_clk_out : out std_logic;
+		iec_srq_out : out std_logic;
+		iec_atn_out : out std_logic;
+		iec_dat_out : out std_logic;
 
 -- SPI, Flash and SD-Card
-		signal flash_sel : out std_logic;
-		signal mmc_cs : out std_logic;
-		signal rtc_cs : out std_logic;
+		flash_sel : out std_logic;
+		mmc_cs : out std_logic;
+		rtc_cs : out std_logic;
 
-		signal sd_cd : in std_logic;
-		signal sd_wp : in std_logic;
-		signal sd_clk : out std_logic;
-		signal sd_miso : in std_logic;
-		signal sd_mosi : out std_logic;
+		sd_cd : in std_logic;
+		sd_wp : in std_logic;
+		sd_clk : out std_logic;
+		sd_miso : in std_logic;
+		sd_mosi : out std_logic;
 
 -- Clock port
-		signal clock_ior : out std_logic;
-		signal clock_iow : out std_logic;
+		clock_ior : out std_logic;
+		clock_iow : out std_logic;
 
 -- C64 bus
-		signal reset_in : in std_logic;
+		reset_in : in std_logic;
 
-		signal ioef : in std_logic;
-		signal romlh : in std_logic;
+		ioef : in std_logic;
+		romlh : in std_logic;
 
-		signal dma_out : out std_logic;
-		signal game_out : out std_logic;
-		signal exrom_out : out std_logic;
+		dma_out : out std_logic;
+		game_out : out std_logic;
+		exrom_out : out std_logic;
 
-		signal irq_in : in std_logic;
-		signal irq_out : out std_logic;
-		signal nmi_in : in std_logic;
-		signal nmi_out : out std_logic;
-		signal ba_in : in std_logic;
-		signal rw_in : in std_logic;
-		signal rw_out : out std_logic;
+		irq_in : in std_logic;
+		irq_out : out std_logic;
+		nmi_in : in std_logic;
+		nmi_out : out std_logic;
+		ba_in : in std_logic;
+		rw_in : in std_logic;
+		rw_out : out std_logic;
 
-		signal sa_dir : out std_logic;
-		signal sa_oe : out std_logic;
-		signal sa15_out : out std_logic;
-		signal low_a : inout unsigned(15 downto 0);
+		sa_dir : out std_logic;
+		sa_oe : out std_logic;
+		sa15_out : out std_logic;
+		low_a : inout unsigned(15 downto 0);
 
-		signal sd_dir : out std_logic;
-		signal sd_oe : out std_logic;
-		signal low_d : inout unsigned(7 downto 0);
+		sd_dir : out std_logic;
+		sd_oe : out std_logic;
+		low_d : inout unsigned(7 downto 0);
 
 -- SDRAM
-		signal ram_clk : out std_logic;
-		signal ram_ldqm : out std_logic;
-		signal ram_udqm : out std_logic;
-		signal ram_ras : out std_logic;
-		signal ram_cas : out std_logic;
-		signal ram_we : out std_logic;
-		signal ram_ba : out unsigned(1 downto 0);
-		signal ram_a : out unsigned(12 downto 0);
-		signal ram_d : inout unsigned(15 downto 0);
+		ram_clk : out std_logic;
+		ram_ldqm : out std_logic;
+		ram_udqm : out std_logic;
+		ram_ras : out std_logic;
+		ram_cas : out std_logic;
+		ram_we : out std_logic;
+		ram_ba : out unsigned(1 downto 0);
+		ram_a : out unsigned(12 downto 0);
+		ram_d : inout unsigned(15 downto 0);
 
 -- IR eye
-		signal ir_data : in std_logic;
+		ir_data : in std_logic;
 
 -- USB micro
-		signal usart_clk : in std_logic;
-		signal usart_rts : in std_logic;
-		signal usart_rx : out std_logic;
-		signal usart_tx : in std_logic;
+		usart_clk : in std_logic;
+		usart_rts : in std_logic;
+		usart_rx : out std_logic;
+		usart_tx : in std_logic;
 
 -- Audio output
-		signal sigma_a : out std_logic;
-		signal sigma_b : out std_logic;
+		sigma_a : out std_logic;
+		sigma_b : out std_logic;
 
 -- VGA output
-		signal red : out unsigned(4 downto 0);
-		signal green : out unsigned(4 downto 0);
-		signal blue : out unsigned(4 downto 0);
-		signal hsync : out std_logic;
-		signal vsync : out std_logic
+		red : out unsigned(4 downto 0);
+		green : out unsigned(4 downto 0);
+		blue : out unsigned(4 downto 0);
+		hsync : out std_logic;
+		vsync : out std_logic
 	);
 end entity;

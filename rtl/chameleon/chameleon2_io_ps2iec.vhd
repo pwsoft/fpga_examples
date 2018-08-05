@@ -100,22 +100,20 @@ begin
 	begin
 		if rising_edge(clk) then
 			state_reg <= state_reg + 1;
-			if state_reg(1 downto 0) = "11" then
-				ps2iec_reg <= ps2iec;
-			end if;
-			if state_reg = "100" then
+			ps2iec_reg <= ps2iec;
+			if state_reg = "011" then
 				-- Capture PS2 lines
-				ps2_mouse_clk_reg <= ps2iec_reg(0);
-				ps2_mouse_dat_reg <= ps2iec_reg(1);
+				ps2_mouse_dat_reg <= ps2iec_reg(0);
+				ps2_mouse_clk_reg <= ps2iec_reg(1);
 				ps2_keyboard_clk_reg <= ps2iec_reg(2);
 				ps2_keyboard_dat_reg <= ps2iec_reg(3);
 			end if;
-			if state_reg = "000" then
+			if state_reg = "111" then
 				-- Capture IEC lines
-				iec_clk_reg <= ps2iec_reg(0);
-				iec_srq_reg <= ps2iec_reg(1);
-				iec_atn_reg <= ps2iec_reg(2);
-				iec_dat_reg <= ps2iec_reg(3);
+				iec_atn_reg <= ps2iec_reg(0);
+				iec_dat_reg <= ps2iec_reg(1);
+				iec_clk_reg <= ps2iec_reg(2);
+				iec_srq_reg <= ps2iec_reg(3);
 			end if;
 		end if;
 	end process;
