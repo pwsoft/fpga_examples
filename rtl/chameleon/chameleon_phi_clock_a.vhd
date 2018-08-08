@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2012 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2018 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -34,10 +34,8 @@ use IEEE.numeric_std.all;
 -- -----------------------------------------------------------------------
 
 architecture rtl of chameleon_phi_clock is
---constant phaseShift : integer := 5; -- Number of cycles that FPGA runs ahead of measured phi.
-constant phaseShift : integer := 8; -- Number of cycles that FPGA runs ahead of measured phi.
 constant guardBits : integer := 4; -- Extra bits to reduce rounding errors in calculations
-signal phi2_n_reg : unsigned(11 downto 0);
+signal phi2_n_reg : unsigned(11 downto 0) := (others => '0');
 signal phiSync : std_logic := '0';
 
 signal locCnt : unsigned(7 downto 0) := (others => '0');
@@ -153,10 +151,10 @@ begin
 				slvCnt <= slvCnt + 1;
 			end if;
 
-			if (slvCnt + phaseShift) = avgLen((7+guardBits) downto (1+guardBits)) then
+			if (slvCnt + phase_shift) = avgLen((7+guardBits) downto (1+guardBits)) then
 				localPreHalf <= '1';
 			end if;
-			if (slvCnt + phaseShift) = avgLen((7+guardBits) downto guardBits)
+			if (slvCnt + phase_shift) = avgLen((7+guardBits) downto guardBits)
 			and localPhi = '1' then
 				localPreEnd <= '1';
 			end if;

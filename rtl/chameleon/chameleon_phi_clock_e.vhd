@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2012 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2018 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -34,6 +34,9 @@ use IEEE.numeric_std.all;
 -- -----------------------------------------------------------------------
 
 entity chameleon_phi_clock is
+	generic (
+		phase_shift : integer := 8
+	);
 	port (
 		clk : in std_logic;
 		phi2_n : in std_logic;
