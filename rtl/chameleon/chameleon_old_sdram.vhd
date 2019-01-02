@@ -51,6 +51,8 @@ entity chameleon_sdram is
 		readAutoPrecharge : boolean := true;
 	-- SDRAM timing
 		casLatency : integer := 3;
+		ras_cycles : integer := 2;
+		precharge_cycles : integer := 2;
 		t_refresh_ms  : real := 64.0;
 		t_refresh_ns : real := 60.0;
 		t_clk_ns  : real := 10.0       -- Clock cycle time
@@ -249,7 +251,9 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			refreshTimer <= refreshTimer + 1;
+			if refreshTimer < refresh_timer_range-1 then
+				refreshTimer <= refreshTimer + 1;
+			end if;
 			if refresh_subtract_reg = '1' then
 				refreshTimer <= refreshTimer - refresh_interval;
 			end if;
@@ -460,7 +464,7 @@ begin
 						end if;
 					end if;
 				when RAM_ACTIVE =>
-					set_timer(timer, 2);
+					set_timer(timer, ras_cycles);
 					ramState <= RAM_READ_1;
 					if currentWe = '1' then
 						ramState <= RAM_WRITE_1;
@@ -667,13 +671,13 @@ begin
 					currentPort <= PORT_NONE;
 					ramState <= RAM_IDLE;
 				when RAM_PRECHARGE =>
-					set_timer(timer, 2);
+					set_timer(timer, precharge_cycles);
 					ramState <= RAM_ACTIVE;
 					sd_we_n_reg <= '0';
 					sd_ras_n_reg <= '0';
 					bankActive(to_integer(currentBank)) <= '0';
 				when RAM_PRECHARGE_ALL =>
-					set_timer(timer, 2);
+					set_timer(timer, precharge_cycles);
 					ramState <= RAM_IDLE;
 					if refresh_active_reg = '1' then
 						set_timer(timer, 1);
