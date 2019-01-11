@@ -358,8 +358,8 @@ begin
 			end if;
 		end if;
 	end process;
-	sigma_a <= sigma_l_reg;
-	sigma_b <= sigma_r_reg;
+	sigma_l <= sigma_l_reg;
+	sigma_r <= sigma_r_reg;
 
 -- -----------------------------------------------------------------------
 -- IEC test
@@ -440,8 +440,8 @@ begin
 			port map (
 				clk => sysclk,
 				ena_1mhz => ena_1mhz,
-				phi2_n => phi2_in,
-				dotclock_n => dotclk_in,
+				phi2_n => phi2_n,
+				dotclock_n => dotclk_n,
 
 				reset => reset,
 
@@ -521,7 +521,7 @@ begin
 			process(sysclk)
 			begin
 				if rising_edge(sysclk) then
-					phi2_n_dly <= phi2_in;
+					phi2_n_dly <= phi2_n;
 					if run = '1' then
 						if phi2_n_dly = '1' then
 							phi2_measure(to_integer(phi_cnt)) <= phi2_measure(to_integer(phi_cnt)) + 1;
@@ -1005,11 +1005,11 @@ begin
 	begin
 		if rising_edge(sysclk) then
 			if vga_colors.ena_pixel = '1' then
-				hsync <= vga_colors.hsync;
-				vsync <= vga_colors.vsync;
+				hsync_n <= vga_colors.hsync;
+				vsync_n <= vga_colors.vsync;
 				red <= vga_colors.r;
-				green <= vga_colors.g;
-				blue <= vga_colors.b;
+				grn <= vga_colors.g;
+				blu <= vga_colors.b;
 			end if;
 		end if;
 	end process;

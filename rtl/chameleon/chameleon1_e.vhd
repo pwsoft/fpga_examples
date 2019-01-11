@@ -23,7 +23,7 @@
 --
 -- -----------------------------------------------------------------------
 --
--- Default toplevel entity for the Turbo Chameleon 64 second edition
+-- Default toplevel entity for the Turbo Chameleon 64 first edition
 --
 -- -----------------------------------------------------------------------
 
@@ -33,73 +33,31 @@ use ieee.numeric_std.all;
 
 -- -----------------------------------------------------------------------
 
-entity chameleon2 is
+entity chameleon1 is
 	port (
 -- Clocks
-		clk50m : in std_logic;
+		clk8m : in std_logic;
 		phi2_n : in std_logic;
 		dotclk_n : in std_logic;
 
--- Buttons
-		usart_cts : in std_logic;  -- Left button
-		freeze_btn : in std_logic; -- Middle button
-		reset_btn : in std_logic;  -- Right
-
--- PS/2, IEC, LEDs
-		iec_present : in std_logic;
-
-		ps2iec_sel : out std_logic;
-		ps2iec : in unsigned(3 downto 0);
-
-		ser_out_clk : out std_logic;
-		ser_out_dat : out std_logic;
-		ser_out_rclk : out std_logic;
-
-		iec_clk_out : out std_logic;
-		iec_srq_out : out std_logic;
-		iec_atn_out : out std_logic;
-		iec_dat_out : out std_logic;
+-- Freeze button
+		usart_cts : in std_logic; -- Left button
+		freeze_btn : in std_logic;  -- Middle button
 
 -- SPI, Flash and SD-Card
-		flash_cs : out std_logic;
-		rtc_cs : out std_logic;
-		mmc_cs : out std_logic;
+		spi_miso : in std_logic;
 		mmc_cd : in std_logic;
 		mmc_wp : in std_logic;
-		spi_clk : out std_logic;
-		spi_miso : in std_logic;
-		spi_mosi : out std_logic;
 
--- Clock port
-		clock_ior : out std_logic;
-		clock_iow : out std_logic;
-
--- C64 bus
-		reset_in : in std_logic;
-
+-- C64
 		ioef : in std_logic;
 		romlh : in std_logic;
 
-		dma_out : out std_logic;
-		game_out : out std_logic;
-		exrom_out : out std_logic;
-
-		irq_in : in std_logic;
-		irq_out : out std_logic;
-		nmi_in : in std_logic;
-		nmi_out : out std_logic;
-		ba_in : in std_logic;
-		rw_in : in std_logic;
-		rw_out : out std_logic;
-
-		sa_dir : out std_logic;
-		sa_oe : out std_logic;
-		sa15_out : out std_logic;
-		low_a : inout unsigned(15 downto 0);
-
-		sd_dir : out std_logic;
-		sd_oe : out std_logic;
-		low_d : inout unsigned(7 downto 0);
+-- MUX CPLD
+		mux_clk : out std_logic;
+		mux : out unsigned(3 downto 0);
+		mux_d : out unsigned(3 downto 0);
+		mux_q : in unsigned(3 downto 0);
 
 -- SDRAM
 		ram_clk : out std_logic;
@@ -112,13 +70,9 @@ entity chameleon2 is
 		ram_a : out unsigned(12 downto 0);
 		ram_d : inout unsigned(15 downto 0);
 
--- IR eye
-		ir_data : in std_logic;
-
 -- USB micro
 		usart_clk : in std_logic;
 		usart_rts : in std_logic;
-		usart_rx : out std_logic;
 		usart_tx : in std_logic;
 
 -- Video output
