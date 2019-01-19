@@ -1,24 +1,24 @@
 set_location_assignment PIN_B9 -to ba_in
-set_location_assignment PIN_T2 -to blue[0]
-set_location_assignment PIN_R1 -to blue[1]
-set_location_assignment PIN_P1 -to blue[2]
-set_location_assignment PIN_P2 -to blue[3]
-set_location_assignment PIN_N1 -to blue[4]
+set_location_assignment PIN_T2 -to blu[0]
+set_location_assignment PIN_R1 -to blu[1]
+set_location_assignment PIN_P1 -to blu[2]
+set_location_assignment PIN_P2 -to blu[3]
+set_location_assignment PIN_N1 -to blu[4]
 set_location_assignment PIN_T9 -to clk50m
 set_location_assignment PIN_L1 -to clock_ior
 set_location_assignment PIN_N2 -to clock_iow
 set_location_assignment PIN_C6 -to dma_out
-set_location_assignment PIN_B8 -to dotclk_in
+set_location_assignment PIN_B8 -to dotclk_n
 set_location_assignment PIN_A6 -to exrom_out
-set_location_assignment PIN_M8 -to flash_sel
+set_location_assignment PIN_M8 -to flash_cs
 set_location_assignment PIN_E1 -to freeze_btn
 set_location_assignment PIN_B6 -to game_out
-set_location_assignment PIN_R5 -to green[0]
-set_location_assignment PIN_T4 -to green[1]
-set_location_assignment PIN_R4 -to green[2]
-set_location_assignment PIN_T3 -to green[3]
-set_location_assignment PIN_R3 -to green[4]
-set_location_assignment PIN_L4 -to hsync
+set_location_assignment PIN_R5 -to grn[0]
+set_location_assignment PIN_T4 -to grn[1]
+set_location_assignment PIN_R4 -to grn[2]
+set_location_assignment PIN_T3 -to grn[3]
+set_location_assignment PIN_R3 -to grn[4]
+set_location_assignment PIN_L4 -to hsync_n
 set_location_assignment PIN_A7 -to iec_atn_out
 set_location_assignment PIN_J13 -to iec_clk_out
 set_location_assignment PIN_L13 -to iec_dat_out
@@ -52,10 +52,12 @@ set_location_assignment PIN_B1 -to low_d[4]
 set_location_assignment PIN_C3 -to low_d[5]
 set_location_assignment PIN_C2 -to low_d[6]
 set_location_assignment PIN_C1 -to low_d[7]
+set_location_assignment PIN_T8 -to mmc_cd
 set_location_assignment PIN_N5 -to mmc_cs
+set_location_assignment PIN_L8 -to mmc_wp
 set_location_assignment PIN_A15 -to nmi_in
 set_location_assignment PIN_C8 -to nmi_out
-set_location_assignment PIN_A8 -to phi2_in
+set_location_assignment PIN_A8 -to phi2_n
 set_location_assignment PIN_D8 -to ps2iec_sel
 set_location_assignment PIN_N14 -to ps2iec[0]
 set_location_assignment PIN_P11 -to ps2iec[1]
@@ -112,24 +114,22 @@ set_location_assignment PIN_E8 -to rw_out
 set_location_assignment PIN_E10 -to sa15_out
 set_location_assignment PIN_A5 -to sa_dir
 set_location_assignment PIN_L2 -to sa_oe
-set_location_assignment PIN_T8 -to sd_cd
-set_location_assignment PIN_J2 -to sd_clk
 set_location_assignment PIN_B5 -to sd_dir
-set_location_assignment PIN_H2 -to sd_miso
-set_location_assignment PIN_M6 -to sd_mosi
 set_location_assignment PIN_A4 -to sd_oe
-set_location_assignment PIN_L8 -to sd_wp
+set_location_assignment PIN_J2 -to spi_clk
+set_location_assignment PIN_H2 -to spi_miso
+set_location_assignment PIN_M6 -to spi_mosi
 set_location_assignment PIN_F9 -to ser_out_clk
 set_location_assignment PIN_E9 -to ser_out_dat
 set_location_assignment PIN_E11 -to ser_out_rclk
-set_location_assignment PIN_D6 -to sigma_a
-set_location_assignment PIN_D3 -to sigma_b
+set_location_assignment PIN_D6 -to sigma_l
+set_location_assignment PIN_D3 -to sigma_r
 set_location_assignment PIN_C14 -to usart_clk
 set_location_assignment PIN_M1 -to usart_cts
 set_location_assignment PIN_E16 -to usart_rts
 set_location_assignment PIN_L7 -to usart_rx
 set_location_assignment PIN_N12 -to usart_tx
-set_location_assignment PIN_N3 -to vsync
+set_location_assignment PIN_N3 -to vsync_n
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ba_in
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to blue[0]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to blue[1]
@@ -140,16 +140,16 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to clk50m
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to clock_ior
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to clock_iow
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to dma_out
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to dotclk_in
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to dotclk_n
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to exrom_out
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to flash_sel
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to flash_cs
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to freeze_btn
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to game_out
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to green[0]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to green[1]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to green[2]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to green[3]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to green[4]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to grn[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to grn[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to grn[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to grn[3]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to grn[4]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to hsync
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to iec_atn_out
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to iec_clk_out
@@ -184,10 +184,12 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to low_d[4]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to low_d[5]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to low_d[6]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to low_d[7]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to mmc_cd
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to mmc_cs
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to mmc_wp
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to nmi_in
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to nmi_out
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to phi2_in
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to phi2_n
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ps2iec_sel
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ps2iec[0]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ps2iec[1]
@@ -244,18 +246,16 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to rw_out
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sa15_out
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sa_dir
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sa_oe
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sd_cd
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sd_clk
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sd_dir
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sd_miso
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sd_mosi
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sd_oe
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sd_wp
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spi_clk
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spi_miso
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spi_mosi
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ser_out_clk
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ser_out_dat
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ser_out_rclk
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sigma_a
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sigma_b
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sigma_l
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to sigma_r
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to usart_clk
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to usart_cts
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to usart_rts
@@ -316,26 +316,26 @@ set_instance_assignment -name FAST_INPUT_REGISTER ON -to ram_d[2]
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to ram_d[1]
 set_instance_assignment -name FAST_INPUT_REGISTER ON -to ram_d[0]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to ba_in
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blue[0]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blue[1]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blue[2]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blue[3]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blue[4]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blu[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blu[1]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blu[2]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blu[3]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to blu[4]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to clk50m
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to clock_ior
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to clock_iow
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to dma_out
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to dotclk_in
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to dotclk_n
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to exrom_out
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to flash_sel
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to flash_cs
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to freeze_btn
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to game_out
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to green[0]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to green[1]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to green[2]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to green[3]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to green[4]
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to hsync
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to grn[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to grn[1]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to grn[2]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to grn[3]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to grn[4]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to hsync_n
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to iec_atn_out
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to iec_clk_out
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to iec_dat_out
@@ -369,10 +369,12 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to low_d[4]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to low_d[5]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to low_d[6]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to low_d[7]
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to mmc_cd
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to mmc_cs
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to mmc_wp
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to nmi_in
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to nmi_out
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to phi2_in
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to phi2_n
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to ps2iec_sel
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to ps2iec[0]
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to ps2iec[1]
@@ -429,21 +431,19 @@ set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to rw_out
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sa15_out
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sa_dir
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sa_oe
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sd_cd
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sd_clk
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sd_dir
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sd_miso
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sd_mosi
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sd_oe
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sd_wp
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to spi_clk
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to spi_miso
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to spi_mosi
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to ser_out_clk
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to ser_out_dat
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to ser_out_rclk
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sigma_a
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sigma_b
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sigma_l
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to sigma_r
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to usart_clk
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to usart_cts
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to usart_rts
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to usart_rx
 set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to usart_tx
-set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to vsync
+set_instance_assignment -name CURRENT_STRENGTH_NEW 4MA -to vsync_n
