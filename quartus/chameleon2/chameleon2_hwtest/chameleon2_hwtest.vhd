@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2018 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2019 by Peter Wendrich (pwsoft@syntiac.com)
 -- All Rights Reserved.
 --
 -- http://www.syntiac.com/chameleon.html
@@ -15,6 +15,88 @@
 -- Toplevel entity of hardware test for Turbo Chameleon 64 second edition.
 --
 -- -----------------------------------------------------------------------
+--
+-- Hardware test can be executed when plug'ed into a C64, standalone or with docking-station.
+-- In C64 mode the machine will startup normally as the Chameleon will be invisible to the machine.
+-- The address-bus of the Chameleon is completely tri-stated in the hardware test.
+-- The hardware test can also be used to test the docking-station. Additional icons become
+-- visible when the docking station is connected.
+--
+-- Connect PS/2 keyboard
+-- Connect PS/2 3 button/wheel mouse
+--
+-- For docking station testing additional hardware required:
+--   C64 keyboard
+--   Amiga 500 keyboard
+--   Joystick with 9 pin connector or amiga mouse
+--
+-- -----------------------------------------------------------------------
+-- Screen layout
+--
+-- Top left corner:
+--   top row 3x blue represent buttons on the Chameleon
+--   middle row 3x yellow represent the state of the PS/2 mouse buttons
+--   bottom row left (green): solid if C64 detected, otherwise open
+--   bottom row middle (green): solid if docking-station detected, otherwise open
+--   bottom row right (red): flashes when a IR signal is detected.
+-- Rest of top:
+--   Color bars (32 steps for each primary color) and then combined to form gray-scale/white.
+-- Running bar in middle:
+--   Checking SDRAM memory (memory ok if green), turns red on error.
+-- Left bottom:
+--   IEC test patterns
+-- Middle/Right bottom (only visible with docking-station):
+--   Top is last scancode received from Amiga keyboard plus a single block representing reset next to it.
+--   Next row is joysticks (from left to right port 4,3,2,1)
+--   Below that is 8 by 8 matrix of C64 keyboard on the side is the restore-key state.
+--
+-- -----------------------------------------------------------------------
+-- Chameleon hardware test
+--
+-- * Press 3 push buttons in sequence and check the blue rectangles in left upper corner
+-- * Check LEDs flashing alternating off, red, green and both
+-- * Check Num lock and Caps lock flashing on keyboard in sync with LEDs on Chameleon
+-- * Check color bars in right upper corner
+--   - Should be smooth (32 steps) colors in red, green, blue and gray/white.
+-- * Move mouse and check yellow cursor follows movement
+-- * Press middle mouse button on mouse, feedback on yellow rectangles
+-- * Press left (mouse) button to play test sound on left channel
+-- * Press right (mouse) button to play test sound on right channel
+-- * Check result of SDRAM memory test (horizontal bar in the center of the screen)
+--   * Wait until green/white progress bar has done one complete sequence.
+--     If bar stops and turns red the memory test failed. Check the SDRAM!
+-- * Hot plug custom IEC test cable into Chameleon
+--    Binary pattern that is put on the pins will change depending on the test cable.
+--    IEC detect goes from filled white to black on the left side.
+--    Reset will flash together with the red/green led pattern.
+--    This way all signals can be tested.
+--
+-- All tests done
+--
+-- -----------------------------------------------------------------------
+-- Docking-station hardware/software test
+--
+-- Connect Amiga keyboard
+-- * Check LEDs flashing alternating off, drive, power and both
+-- * Press 1/! key scancode should be             0000000#
+-- * Release key scancode should be               #000000#
+-- * Press and release F10 key scancode should be ##0##00#
+-- * Press CTRL+AMIGA+AMIGA and the single block next to the scancode should open.
+--
+-- Connect C64 keyboard
+-- * No key pressed the 8 by 8 matrix should be all '#'
+-- * Press single keys and observe only one hole in 8 by 8 matrix.
+-- * Press restore key. The block on the right side 8 by 8 matrix should open.
+-- 
+-- Connect joystick to each joystick port.
+-- The joysticks are represented by 4 groups of 6 blocks above 8 by 8 matrix.
+-- From left to right the groups of blocks belong to port 4, 3, 2 then 1.
+-- * Press Up. The most right block in a group should open.
+-- * Press Down. The block second from the right in a group should open.
+-- * Press Left. The block third from the right in a group should open.
+-- * Press Right. The block third from the left in a group should open.
+-- * Press fire. The block second from the left in a group should open.
+-- * Press second fire (or right Amiga mouse button). The most left block in a group should open.
 --
 -- -----------------------------------------------------------------------
 
@@ -422,7 +504,7 @@ begin
 			ser_out_rclk => ser_out_rclk,
 
 			reset_c64 => '0', -- system_reset,
-			reset_iec => '0', -- system_reset,
+			reset_iec => led_green,
 			ps2_mouse_clk => ps2_mouse_clk_out,
 			ps2_mouse_dat => ps2_mouse_dat_out,
 			ps2_keyboard_clk => ps2_keyboard_clk_out,
