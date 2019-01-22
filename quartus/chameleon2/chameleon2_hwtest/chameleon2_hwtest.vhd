@@ -1048,6 +1048,15 @@ begin
 						vga_colors_reg.b <= (others => '1');
 					end if;
 
+					-- IR tester
+					if (abs(x - 128) < 7) and (abs(y - 192) < 7) and (ir_data = '0') then
+						vga_colors_reg.r <= (others => '1');
+					elsif (abs(x - 128) = 7) and (abs(y - 192) < 7) then
+						vga_colors_reg.r <= (others => '1');
+					elsif (abs(x - 128) < 7) and (abs(y - 192) = 7) then
+						vga_colors_reg.r <= (others => '1');
+					end if;
+
 					-- Draw boxes
 					if (vid_chameleon_buttons
 					or vid_mouse_buttons
