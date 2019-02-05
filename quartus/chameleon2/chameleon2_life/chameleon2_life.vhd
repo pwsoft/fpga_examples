@@ -15,13 +15,13 @@
 -- Conway's Game of Life simulator for Chameleon
 --
 -- -----------------------------------------------------------------------
--- 
+--
 --
 -- -----------------------------------------------------------------------
 
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.numeric_std.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 -- -----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ architecture rtl of chameleon2 is
 	signal vga_life_pixel : std_logic := '0';
 	signal vga_life_menu : std_logic := '0';
 	signal vga_life_rules : std_logic := '0';
-	
+
 -- Clocks
 	signal sysclk : std_logic;
 	signal clk_150 : std_logic;
@@ -86,10 +86,10 @@ architecture rtl of chameleon2 is
 	signal mouse_right_button : std_logic;
 	signal mouse_delta_x : signed(8 downto 0);
 	signal mouse_delta_y : signed(8 downto 0);
-	
+
 	signal cursor_x : signed(11 downto 0) := to_signed(320, 12);
 	signal cursor_y : signed(11 downto 0) := to_signed(240, 12);
-	
+
 -- VGA
 	signal end_of_pixel : std_logic;
 	signal end_of_line : std_logic;
@@ -108,11 +108,11 @@ architecture rtl of chameleon2 is
 			b : unsigned(4 downto 0);
 		end record;
 	signal vga_master : stage_t;
-	
+
 	signal red_reg : unsigned(4 downto 0) := (others => '0');
 	signal grn_reg : unsigned(4 downto 0) := (others => '0');
 	signal blu_reg : unsigned(4 downto 0) := (others => '0');
-	
+
 -- Docking station
 	signal docking_station : std_logic;
 	signal docking_keys : unsigned(63 downto 0);
@@ -128,7 +128,7 @@ architecture rtl of chameleon2 is
 
 	signal phi_cnt : unsigned(7 downto 0);
 	signal phi_end_1 : std_logic;
-	
+
 	procedure drawtext(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; t : string) is
 		variable ch : character;
 		variable pixels : unsigned(0 to 63);
@@ -190,8 +190,24 @@ architecture rtl of chameleon2 is
 		end if;
 	end procedure;
 begin
+-- -----------------------------------------------------------------------
+-- Unused pins
+-- -----------------------------------------------------------------------
+	iec_clk_out <= '0';
+	iec_atn_out <= '0';
+	iec_dat_out <= '0';
+	iec_srq_out <= '0';
+	irq_out <= '0';
+	nmi_out <= '0';
+	sigma_l <= '0';
+	sigma_r <= '0';
+
+-- -----------------------------------------------------------------------
+-- VGA sync
+-- -----------------------------------------------------------------------
 	hsync_n <= not vga_master.hsync;
 	vsync_n <= not vga_master.vsync;
+
 
 -- -----------------------------------------------------------------------
 -- Clocks and PLL
@@ -200,7 +216,7 @@ begin
 		port map (
 			inclk0 => clk50m,
 			c0 => sysclk,
-			c1 => open, 
+			c1 => open,
 			c2 => clk_150,
 			c3 => sd_clk_loc,
 			locked => clk_locked
@@ -214,11 +230,11 @@ begin
 		port map (
 			clk => sysclk,
 			phi2_n => phi2_n,
-		
+
 			-- no_clock is high when there are no phiIn changes detected.
 			-- This signal allows switching between real I/O and internal emulation.
 			no_clock => no_clock,
-		
+
 			-- docking_station is high when there are no phiIn changes (no_clock) and
 			-- the phi signal is low. Without docking station phi is pulled up.
 			docking_station => docking_station
@@ -258,6 +274,7 @@ begin
 			ena_1mhz => ena_1mhz,
 			ena_1khz => ena_1khz
 		);
+
 -- -----------------------------------------------------------------------
 -- Chameleon IO, docking station and cartridge port
 -- -----------------------------------------------------------------------
@@ -279,6 +296,9 @@ begin
 				reset => reset,
 
 				ir_data => ir_data,
+				clock_ior => clock_ior,
+				clock_iow => clock_iow,
+
 				ioef => ioef,
 				romlh => romlh,
 
@@ -309,111 +329,42 @@ begin
 				joystick2 => docking_joystick2,
 				joystick3 => docking_joystick3,
 				joystick4 => docking_joystick4,
-				
+
 				keys => docking_keys,
 				restore_key_n => docking_restore_n
 			);
+
+		flash_cs <= '1';
+		mmc_cs <= '1';
+		rtc_cs <= '0';
 	end block;
-	
+
 -- -----------------------------------------------------------------------
 -- Docking station
 -- -----------------------------------------------------------------------
 --	myDockingStation : entity work.chameleon_docking_station
 --		port map (
 --			clk => sysclk,
---			
+--
 --			docking_station => docking_station,
---			
+--
 --			dotclock_n => dotclock_n,
 --			io_ef_n => ioef_n,
 --			rom_lh_n => romlh_n,
 --			irq_q => docking_irq,
---			
+--
 --			joystick1 => docking_joystick1,
 --			joystick2 => docking_joystick2,
 --			joystick3 => docking_joystick3,
 --			joystick4 => docking_joystick4,
 --			keys => docking_keys,
 --			restore_key_n => docking_restore_n,
---			
+--
 --			amiga_power_led => led_green,
 --			amiga_drive_led => led_red,
 --			amiga_reset_n => docking_amiga_reset_n,
 --			amiga_scancode => docking_amiga_scancode
 --		);
-
--- -----------------------------------------------------------------------
--- MUX CPLD
--- -----------------------------------------------------------------------
-	-- MUX clock
---	process(sysclk)
---	begin
---		if rising_edge(sysclk) then
---			mux_clk_reg <= not mux_clk_reg;
---		end if;
---	end process;
-
-	-- MUX read
---	process(sysclk)
---	begin
---		if rising_edge(sysclk) then
---			if mux_clk_reg = '1' then
---				case mux_reg is
---				when X"6" =>
---					irq_n <= mux_q(2);
---				when X"B" =>
---					reset_button_n <= mux_q(1);
---					ir <= mux_q(3);
---				when X"E" =>
---					ps2_keyboard_dat_in <= mux_q(0);
---					ps2_keyboard_clk_in <= mux_q(1);
---					ps2_mouse_dat_in <= mux_q(2);
---					ps2_mouse_clk_in <= mux_q(3);
---				when others =>
---					null;
---				end case;
---			end if;
---		end if;
---	end process;
-
-	-- MUX write
---	process(sysclk)
---	begin
---		if rising_edge(sysclk) then
---			if mux_clk_reg = '1' then
---				case mux_reg is
---				when X"7" =>
---					mux_d_reg <= "1111";
---					if docking_station = '1' then
---						mux_d_reg <= "1" & docking_irq & "11";
---					end if;
---					mux_reg <= X"6";
---				when X"6" =>
---					mux_d_reg <= "1111";
---					mux_reg <= X"8";
---				when X"8" =>
---					mux_d_reg <= "10" & led_green & led_red;
---					mux_reg <= X"B";
---				when X"B" =>
---					mux_d_reg(0) <= ps2_keyboard_dat_out;
---					mux_d_reg(1) <= ps2_keyboard_clk_out;
---					mux_d_reg(2) <= ps2_mouse_dat_out;
---					mux_d_reg(3) <= ps2_mouse_clk_out;
---					mux_reg <= X"E";
---				when X"E" =>
---					mux_d_reg <= "1111";
---					mux_reg <= X"7";
---				when others =>
---					mux_reg <= X"B";
---					mux_d_reg <= "10" & led_green & led_red;
---				end case;
---			end if;
---		end if;
---	end process;
-	
---	mux_clk <= mux_clk_reg;
---	mux_d <= mux_d_reg;
---	mux <= mux_reg;
 
 -- -----------------------------------------------------------------------
 -- PS2IEC multiplexer
@@ -447,8 +398,8 @@ begin
 			ser_out_dat => ser_out_dat,
 			ser_out_rclk => ser_out_rclk,
 
-			reset_c64 => '0', -- system_reset,
-			reset_iec => led_green,
+			reset_c64 => reset,
+			reset_iec => reset,
 			ps2_mouse_clk => ps2_mouse_clk_out,
 			ps2_mouse_dat => ps2_mouse_dat_out,
 			ps2_keyboard_clk => ps2_keyboard_clk_out,
@@ -456,7 +407,7 @@ begin
 			led_green => led_green,
 			led_red => led_red
 		);
-		
+
 -- -----------------------------------------------------------------------
 -- Mouse controller
 -- -----------------------------------------------------------------------
@@ -582,18 +533,18 @@ begin
 		signal game_buffer_store_0_dly : std_logic := '0';
 		signal game_buffer_cur_row : integer range 0 to life_rows-1 := 0;
 		signal game_buffer_next_row : integer range 0 to life_rows-1 := 0;
-		
+
 		-- By default rules are "Conway's game of life". Born with 3 neighbours, stay alive with 2 or 3.
 		signal game_rules0 : unsigned(0 to 8) := "000100000";
 		signal game_rules1 : unsigned(0 to 8) := "001100000";
-		
+
 		signal vga_line_empty : std_logic := '0';
 		signal vga_line_read : std_logic := '0';
 		signal vga_line_read2 : std_logic := '0';
-		
+
 		-- Game field memory control. By restricting the access to the gamefield
 		-- by a memory interface, it allows Quartus to synthesize Block-RAM.
-		-- 
+		--
 		signal mem_we : std_logic := '0';
 		signal mem_row : integer range 0 to life_rows-1 := 0;
 		signal mem_d : line_t;
@@ -605,7 +556,7 @@ begin
 		signal run_column : integer range 0 to life_columns;
 		signal run_row : integer range 0 to life_rows;
 		signal mouse_row : integer range 0 to life_rows-1 := 0;
-		
+
 		signal mem_mouse_dly : std_logic := '0';
 		signal mouse_left_button_dly : std_logic := '0';
 	begin
@@ -619,7 +570,7 @@ begin
 				mem_q <= game_field(mem_row);
 			end if;
 		end process;
-		
+
 		process(sysclk)
 			variable cycle_available : boolean;
 			variable life_neighbours : integer range 0 to 8;
@@ -649,7 +600,7 @@ begin
 				elsif (mouse_trigger = '1') and ((mouse_left_button = '1') or (mouse_right_button = '1')) then
 					-- Mouse button is clicked
 					if (cursor_y > 3) and (cursor_y < (life_rows+4))
-					and (cursor_x > 3) and (cursor_x < (life_columns+4)) then 
+					and (cursor_x > 3) and (cursor_x < (life_columns+4)) then
 						-- Click was inside the playfield. Perform fetch of the clicked row.
 						-- The number of the row is also stored in "mouse_row" as it needs to be written
 						-- back after update as the mouse might have be moved in the mean time.
@@ -692,8 +643,8 @@ begin
 						game_buffer_bot <= game_buffer_0;
 					end if;
 				end if;
-				
-				
+
+
 				-- Game state-machine.
 				case game_state is
 				when GAME_STOP =>
@@ -860,7 +811,7 @@ begin
 				end if;
 			end if;
 		end process;
-		
+
 		--
 		-- Draw speed selection menu
 		process(sysclk)
@@ -881,7 +832,7 @@ begin
 				box(vga_life_menu, x, y, 512+7*16, 32, game_mode = MODE_MAX);
 			end if;
 		end process;
-		
+
 		--
 		-- Draw rule selection menu
 		process(sysclk)
@@ -997,7 +948,7 @@ begin
 				red_reg <= (others => '0');
 				grn_reg <= (others => '0');
 				blu_reg <= (others => '0');
-			
+
 			--
 			-- Draw game
 				if vga_life_background = '1' then

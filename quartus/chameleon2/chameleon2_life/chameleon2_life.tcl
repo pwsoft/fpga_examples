@@ -33,7 +33,6 @@ set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_buttons.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_c64_joykeyb.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_cdtv_remote.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_docking_station.vhd
-set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_input.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_led.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_phi_clock_a.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_phi_clock_e.vhd
