@@ -27,6 +27,7 @@ use IEEE.numeric_std.ALL;
 
 architecture rtl of chameleon2 is
 	constant reset_cycles : integer := 131071;
+
 -- Game of life settings
 	constant life_columns : integer := 512;
 	constant life_rows : integer := 472;
@@ -95,8 +96,7 @@ architecture rtl of chameleon2 is
 	signal end_of_frame : std_logic;
 	signal currentX : unsigned(11 downto 0);
 	signal currentY : unsigned(11 downto 0);
---	signal hsync : std_logic;
---	signal vsync : std_logic;
+
 	type stage_t is record
 			ena_pixel : std_logic;
 			hsync : std_logic;
@@ -190,8 +190,6 @@ architecture rtl of chameleon2 is
 		end if;
 	end procedure;
 begin
---	nHSync <= not hsync;
---	nVSync <= not vsync;
 	hsync_n <= not vga_master.hsync;
 	vsync_n <= not vga_master.vsync;
 
@@ -207,8 +205,7 @@ begin
 			c3 => sd_clk_loc,
 			locked => clk_locked
 		);
--- missing in pin file?
---	sd_clk <= sd_clk_loc;
+	ram_clk <= sd_clk_loc;
 
 -- -----------------------------------------------------------------------
 -- Phi 2
@@ -232,7 +229,6 @@ begin
 -- -----------------------------------------------------------------------
 	myReset : entity work.gen_reset
 		generic map (
---			resetCycles => resetCycles
 			resetCycles => reset_cycles
 		)
 		port map (
@@ -309,18 +305,13 @@ begin
 				phi_cnt => phi_cnt,
 				phi_end_1 => phi_end_1,
 
---				joystick1 => joystick1,
---				joystick2 => joystick2,
---				joystick3 => joystick3,
---				joystick4 => joystick4,
-			joystick1 => docking_joystick1,
-			joystick2 => docking_joystick2,
-			joystick3 => docking_joystick3,
-			joystick4 => docking_joystick4,
---				keys => keys,
---				restore_key_n => restore_n
-			keys => docking_keys,
-			restore_key_n => docking_restore_n
+				joystick1 => docking_joystick1,
+				joystick2 => docking_joystick2,
+				joystick3 => docking_joystick3,
+				joystick4 => docking_joystick4,
+				
+				keys => docking_keys,
+				restore_key_n => docking_restore_n
 			);
 	end block;
 	
@@ -439,10 +430,6 @@ begin
 			ps2_keyboard_clk => ps2_keyboard_clk_in,
 			ps2_keyboard_dat => ps2_keyboard_dat_in,
 
---			iec_clk => iec_clk_in,
---			iec_srq => iec_srq_in,
---			iec_atn => iec_atn_in,
---			iec_dat => iec_dat_in
 			iec_clk => open, --iec_clk_in,
 			iec_srq => open, --iec_srq_in,
 			iec_atn => open, --iec_atn_in,
@@ -508,8 +495,6 @@ begin
 			-- 100 Mhz / (3+1) = 25 Mhz
 			clkDiv => X"3",
 
---			hSync => hSync,
---			vSync => vSync,
 			hSync => vga_master.hsync,
 			vSync => vga_master.vsync,
 
