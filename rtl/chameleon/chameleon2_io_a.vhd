@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2018 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2019 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -72,8 +72,8 @@ architecture rtl of chameleon2_io is
 	signal ir_middle_button : std_logic := '0';
 	signal ir_right_button : std_logic := '0';
 	signal ir_arrowleft : std_logic := '0';
-	signal ir_plus : std_logic := '0';
-	signal ir_minus : std_logic := '0';
+	signal ir_y : std_logic := '0';
+	signal ir_n : std_logic := '0';
 	signal ir_runstop : std_logic := '0';
 	signal ir_keys : unsigned(63 downto 0);
 	signal ir_joystick1 : unsigned(5 downto 0) := (others => '1');
@@ -199,21 +199,21 @@ begin
 				key_play => ir_up,
 				key_ff => ir_right,
 				key_stop => ir_down,
-				key_vol_up => ir_plus,
-				key_vol_dn => ir_minus,
+				key_vol_up => ir_y,
+				key_vol_dn => ir_n,
 
 				joystick_a => ir_joystick1,
 				joystick_b => ir_joystick2
 			);
 
-			ir_keys <= (not ir_runstop) & "111111" & (not (ir_up or ir_down)) &
+			ir_keys <= (not ir_runstop) & "11" & (not ir_n) & "111" & (not (ir_up or ir_down)) &
 					"1111111" & (not (ir_f5 or ir_f6)) &
 					"1111111" & (not (ir_f3 or ir_f4)) &
 					(not ir_space) & (not (ir_left or ir_up or ir_f2 or ir_f4 or ir_f6 or ir_f8)) & "11111" & (not (ir_f1 or ir_f2)) &
-					"11" & (not ir_minus) & "1111" & (not (ir_f7 or ir_f8)) &
+					"1111111" & (not (ir_f7 or ir_f8)) &
 					"1111111" & (not (ir_left or ir_right)) &
-					"1111111" & (not ir_enter) &
-					"11" & (not ir_plus) & "11111";
+					(not ir_arrowleft) & "111" & (not ir_y) & "11" & (not ir_enter) &
+					"11111111";
 	end generate;
 
 	noCdtvRemote : if not enable_cdtv_remote generate
@@ -266,12 +266,14 @@ begin
 				if rising_edge(clk) then
 					if end_of_phi_1 = '1' then
 						c64_kb_cs_reg <= '0';
-						if c64_kb_cs_reg = '1' then
-							-- C64 bus transaction finished
-							c64_kb_ack <= c64_kb_req;
-						else
-							-- Start new C64 bus transaction
-							c64_kb_cs_reg <= '1';
+						if c64_kb_req /= c64_kb_ack then
+							if c64_kb_cs_reg = '1' then
+								-- C64 bus transaction finished
+								c64_kb_ack <= c64_kb_req;
+							else
+								-- Start new C64 bus transaction
+								c64_kb_cs_reg <= '1';
+							end if;
 						end if;
 					end if;
 				end if;
@@ -318,7 +320,7 @@ begin
 			BUS0_04, BUS0_05, BUS0_06, BUS0_07, BUS0_08,
 			BUS0_09, BUS0_0A, --BUS0_0B, BUS0_0C, BUS0_0D, BUS0_0E, BUS0_0F,
 			BUS_WAIT_PHI1,
-			BUS1_00, BUS1_01, BUS1_02, BUS1_03, BUS1_04, BUS1_05, BUS1_06);
+			BUS1_00, BUS1_01, BUS1_02, BUS1_03, BUS1_04, BUS1_05);
 
 		signal state_reg : state_t := BUS_RESET;
 		--signal exrom_out_reg : std_logic := '0';
@@ -372,22 +374,22 @@ begin
 						end if;
 					end if;
 				when BUS0_00 =>
+					state_reg <= BUS0_01;
+				when BUS0_01 =>
 					game_out_reg <= '1';
 					low_a_reg(15) <= '0';
 					clock_ior_reg <= '1';
 					clock_iow_reg <= '1';
-					state_reg <= BUS0_01;
-				when BUS0_01 =>
 					state_reg <= BUS0_02;
 				when BUS0_02 =>
-					rw_out_reg <= '0';
-					sa_oe_reg <= '1';
 					state_reg <= BUS0_03;
 				when BUS0_03 =>
-					sa15_out_reg <= '1';
 					low_a_oe_reg <= '0';
+					rw_out_reg <= '0';
+					sa_oe_reg <= '1';
 					state_reg <= BUS0_04;
 				when BUS0_04 =>
+					sa15_out_reg <= '1';
 					state_reg <= BUS0_05;
 				when BUS0_05 =>
 					state_reg <= BUS0_06;
@@ -455,26 +457,25 @@ begin
 					if c64_cs_vicii_loc = '1' then
 						sa15_out_reg <= '1';
 					end if;
+					low_a_reg <= "0" & c64_a_loc(14 downto 0);
 					low_d_out_reg <= c64_d_loc;
 					state_reg <= BUS1_04;
 				when BUS1_04 =>
-					low_d_out_reg <= c64_d_loc;
-					state_reg <= BUS1_05;
-				when BUS1_05 =>
 					sd_dir_reg <= dir_fr_c64;
 					if ((c64_cs_loc and c64_we_loc) or c64_cs_vicii_loc) = '1' then
 						sd_dir_reg <= dir_to_c64;
 						low_d_oe_reg <= '1';
 					end if;
+					low_a_reg <= "0" & c64_a_loc(14 downto 0);
 					low_d_out_reg <= c64_d_loc;
-					state_reg <= BUS1_06;
-				when BUS1_06 =>
+					state_reg <= BUS1_05;
+				when BUS1_05 =>
 					sd_oe_reg <= '0';
-					low_a_reg(15) <= c64_a_loc(15);
 					if c64_cs_clockport_loc = '1' then
 						clock_ior_reg <= c64_we_loc;
 						clock_iow_reg <= not c64_we_loc;
 					end if;
+					low_a_reg <= c64_a_loc(15 downto 0);
 					low_d_out_reg <= c64_d_loc;
 					state_reg <= BUS_WAIT_PHI0;
 				end case;
