@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2017 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2019 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -77,17 +77,17 @@ entity chameleon_buttons is
 	port (
 		clk : in std_logic;
 		ena_1khz : in std_logic;
-		menu_mode : in std_logic;
+		menu_mode : in std_logic := '0';
 		
-		reset_last_button : in std_logic;
+		reset_last_button : in std_logic := '0';
 		last_button : out unsigned(2 downto 0);
 		
 		button_l : in std_logic;
 		button_m : in std_logic;
 		button_r : in std_logic;
-		button_l_2 : in std_logic;
-		button_m_2 : in std_logic;
-		button_r_2 : in std_logic;
+		button_l_2 : in std_logic := '0';
+		button_m_2 : in std_logic := '0';
+		button_r_2 : in std_logic := '0';
 		button_config : in unsigned(3 downto 0);
 		
 		reset : out std_logic;
