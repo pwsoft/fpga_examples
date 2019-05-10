@@ -119,10 +119,10 @@ architecture rtl of chameleon2 is
 	signal docking_restore_n : std_logic;
 	signal docking_irq : std_logic;
 	signal irq_n : std_logic;
-	signal docking_joystick1 : unsigned(5 downto 0);
-	signal docking_joystick2 : unsigned(5 downto 0);
-	signal docking_joystick3 : unsigned(5 downto 0);
-	signal docking_joystick4 : unsigned(5 downto 0);
+	signal docking_joystick1 : unsigned(6 downto 0);
+	signal docking_joystick2 : unsigned(6 downto 0);
+	signal docking_joystick3 : unsigned(6 downto 0);
+	signal docking_joystick4 : unsigned(6 downto 0);
 	signal docking_amiga_reset_n : std_logic;
 	signal docking_amiga_scancode : unsigned(7 downto 0);
 

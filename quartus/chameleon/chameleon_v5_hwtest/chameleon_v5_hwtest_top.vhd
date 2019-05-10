@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2012 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2019 by Peter Wendrich (pwsoft@syntiac.com)
 -- All Rights Reserved.
 --
 -- http://www.syntiac.com/chameleon.html
@@ -108,17 +108,17 @@
 -- * No key pressed the 8 by 8 matrix should be all '#'
 -- * Press single keys and observe only one hole in 8 by 8 matrix.
 -- * Press restore key. The block on the right side 8 by 8 matrix should open.
--- 
+--
 -- Connect joystick to each joystick port.
--- The joysticks are represented by 4 groups of 6 blocks above 8 by 8 matrix.
--- From left to right the groups of blocks belong to port 4, 3, 2 then 1.
+-- The joysticks are represented by 4 groups of 7 blocks on the lower/right side
+-- of the screen. From top to bottom the groups of blocks belong to port 1, 2, 3 then 4.
 -- * Press Up. The most right block in a group should open.
 -- * Press Down. The block second from the right in a group should open.
 -- * Press Left. The block third from the right in a group should open.
 -- * Press Right. The block third from the left in a group should open.
 -- * Press fire. The block second from the left in a group should open.
 -- * Press second fire (or right Amiga mouse button). The most left block in a group should open.
--- 
+--
 --
 -- -----------------------------------------------------------------------
 
@@ -190,8 +190,10 @@ end entity;
 -- -----------------------------------------------------------------------
 
 architecture rtl of chameleon_v5_hwtest_top is
+	constant version_str : string := "20190510";
+
 	type state_t is (TEST_IDLE, TEST_FILL, TEST_FILL_W, TEST_CHECK, TEST_CHECK_W, TEST_ERROR);
-	
+
 -- System clocks
 	signal sysclk : std_logic;
 	signal clk_150 : std_logic;
@@ -202,27 +204,21 @@ architecture rtl of chameleon_v5_hwtest_top is
 	signal no_clock : std_logic;
 
 	signal reset_button_n : std_logic;
-	
+
 -- Global signals
 	signal reset : std_logic;
 	signal end_of_pixel : std_logic;
 	signal end_of_frame : std_logic;
-	
+
 -- RAM Test
 	signal state : state_t := TEST_IDLE;
 	signal noise_bits : unsigned(7 downto 0);
-	
+
 -- MUX
 	signal mux_clk_reg : std_logic := '0';
 	signal mux_reg : unsigned(3 downto 0) := (others => '1');
 	signal mux_d_reg : unsigned(3 downto 0) := (others => '1');
 
--- 4 Port joystick adapter
-	signal video_joystick_shift_reg : std_logic;
-
--- C64 keyboard (on joystick adapter)
-	signal video_keyboard_reg : std_logic;
-	
 -- LEDs
 	signal led_green : std_logic;
 	signal led_red : std_logic;
@@ -253,10 +249,10 @@ architecture rtl of chameleon_v5_hwtest_top is
 	signal mouse_right_button : std_logic;
 	signal mouse_delta_x : signed(8 downto 0);
 	signal mouse_delta_y : signed(8 downto 0);
-	
+
 	signal cursor_x : signed(11 downto 0) := to_signed(0, 12);
 	signal cursor_y : signed(11 downto 0) := to_signed(0, 12);
-	
+
 	signal sdram_req : std_logic := '0';
 	signal sdram_ack : std_logic;
 	signal sdram_we : std_logic := '0';
@@ -269,12 +265,12 @@ architecture rtl of chameleon_v5_hwtest_top is
 	signal currentY : unsigned(11 downto 0);
 	signal hsync : std_logic;
 	signal vsync : std_logic;
-	
+
 	signal iec_cnt : unsigned(2 downto 0);
 	signal iec_reg : unsigned(3 downto 0);
 	signal iec_result : unsigned(23 downto 0);
 	signal vga_id : unsigned(3 downto 0);
-	
+
 	signal video_amiga : std_logic := '0';
 
 -- Sound
@@ -283,18 +279,71 @@ architecture rtl of chameleon_v5_hwtest_top is
 
 -- Docking station
 	signal docking_station : std_logic;
+	signal docking_version : std_logic;
 	signal docking_keys : unsigned(63 downto 0);
 	signal docking_restore_n : std_logic;
 	signal docking_irq : std_logic;
 	signal irq_n : std_logic;
-	
-	signal docking_joystick1 : unsigned(5 downto 0);
-	signal docking_joystick2 : unsigned(5 downto 0);
-	signal docking_joystick3 : unsigned(5 downto 0);
-	signal docking_joystick4 : unsigned(5 downto 0);
+
+	signal joystick1 : unsigned(6 downto 0);
+	signal joystick2 : unsigned(6 downto 0);
+	signal joystick3 : unsigned(6 downto 0);
+	signal joystick4 : unsigned(6 downto 0);
 	signal docking_amiga_reset_n : std_logic;
 	signal docking_amiga_scancode : unsigned(7 downto 0);
-	
+
+	procedure drawtext(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; t : string) is
+		variable ch : character;
+		variable pixels : unsigned(0 to 63);
+	begin
+		if (x >= xpos) and ((x - xpos) < 8*t'length)
+		and (y >= ypos) and ((y - ypos) < 8) then
+			pixels := (others => '0');
+			ch := t(1 + (to_integer(x-xpos) / 8));
+			case ch is
+			when ''' => pixels := X"0808000000000000";
+			when '.' => pixels := X"00000000000C0C00";
+--			when '/' => pixels := X"0002040810204000";
+			when '0' => pixels := X"1C22222A22221C00";
+			when '1' => pixels := X"0818080808081C00";
+			when '2' => pixels := X"1C22020408103E00";
+			when '3' => pixels := X"1C22020C02221C00";
+			when '4' => pixels := X"0C14243E04040E00";
+			when '5' => pixels := X"3E20203C02221C00";
+			when '6' => pixels := X"1C20203C22221C00";
+			when '7' => pixels := X"3E02040810101000";
+			when '8' => pixels := X"1C22221C22221C00";
+			when '9' => pixels := X"1C22221E02021C00";
+			when ':' => pixels := X"000C0C000C0C0000";
+			when 'A' => pixels := X"1C22223E22222200";
+			when 'B' => pixels := X"3C22223C22223C00";
+			when 'C' => pixels := X"1C22202020221C00";
+			when 'D' => pixels := X"3C22222222223C00";
+			when 'E' => pixels := X"3E20203C20203E00";
+			when 'F' => pixels := X"3E20203C20202000";
+			when 'G' => pixels := X"1C22202E22221C00";
+			when 'H' => pixels := X"2222223E22222200";
+			when 'I' => pixels := X"1C08080808081C00";
+			when 'K' => pixels := X"2222243824222200";
+			when 'L' => pixels := X"1010101010101E00";
+			when 'M' => pixels := X"4163554941414100";
+			when 'N' => pixels := X"22322A2A26222200";
+			when 'O' => pixels := X"1C22222222221C00";
+			when 'P' => pixels := X"1C12121C10101000";
+			when 'R' => pixels := X"3C22223C28242200";
+			when 'S' => pixels := X"1C22201C02221C00";
+			when 'T' => pixels := X"3E08080808080800";
+			when 'U' => pixels := X"2222222222221C00";
+			when 'V' => pixels := X"2222221414080800";
+			when 'W' => pixels := X"4141412A2A141400";
+			when 'Y' => pixels := X"2222140808080800";
+			when others =>
+				null;
+			end case;
+			video <= pixels(to_integer(y - ypos) * 8 + (to_integer(x - xpos) mod 8));
+		end if;
+	end procedure;
+
 	procedure box(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; value : std_logic) is
 	begin
 		if (abs(x - xpos) < 5) and (abs(y - ypos) < 5) and (value = '1') then
@@ -303,7 +352,7 @@ architecture rtl of chameleon_v5_hwtest_top is
 			video <= '1';
 		elsif (abs(x - xpos) < 5) and (abs(y - ypos) = 5) then
 			video <= '1';
-		end if;		
+		end if;
 	end procedure;
 begin
 	nHSync <= not hsync;
@@ -316,7 +365,7 @@ begin
 		port map (
 			inclk0 => clk8,
 			c0 => sysclk,
-			c1 => open, 
+			c1 => open,
 			c2 => clk_150,
 			c3 => sd_clk_loc,
 			locked => clk_locked
@@ -330,11 +379,11 @@ begin
 		port map (
 			clk => sysclk,
 			phi2_n => phi2_n,
-		
+
 			-- no_clock is high when there are no phiIn changes detected.
 			-- This signal allows switching between real I/O and internal emulation.
 			no_clock => no_clock,
-		
+
 			-- docking_station is high when there are no phiIn changes (no_clock) and
 			-- the phi signal is low. Without docking station phi is pulled up.
 			docking_station => docking_station
@@ -374,7 +423,7 @@ begin
 			ena_1mhz => ena_1mhz,
 			ena_1khz => ena_1khz
 		);
-	
+
 
 -- -----------------------------------------------------------------------
 -- SDRAM Controller
@@ -400,7 +449,7 @@ begin
 			sd_ba_1 => sd_ba_1,
 			sd_ldqm => sd_ldqm,
 			sd_udqm => sd_udqm,
-			
+
 			cpu6510_req => sdram_req,
 			cpu6510_ack => sdram_ack,
 			cpu6510_we => sdram_we,
@@ -424,7 +473,7 @@ begin
 			d => sdram_a,
 			q => noise_bits
 		);
-	
+
 	process(sysclk)
 	begin
 		if rising_edge(sysclk) then
@@ -552,21 +601,22 @@ begin
 	myDockingStation : entity work.chameleon_docking_station
 		port map (
 			clk => sysclk,
-			
+
 			docking_station => docking_station,
-			
+			docking_version => docking_version,
+
 			dotclock_n => dotclock_n,
 			io_ef_n => ioef_n,
 			rom_lh_n => romlh_n,
 			irq_q => docking_irq,
-			
-			joystick1 => docking_joystick1,
-			joystick2 => docking_joystick2,
-			joystick3 => docking_joystick3,
-			joystick4 => docking_joystick4,
+
+			joystick1 => joystick1,
+			joystick2 => joystick2,
+			joystick3 => joystick3,
+			joystick4 => joystick4,
 			keys => docking_keys,
 			restore_key_n => docking_restore_n,
-			
+
 			amiga_power_led => led_green,
 			amiga_drive_led => led_red,
 			amiga_reset_n => docking_amiga_reset_n,
@@ -649,7 +699,7 @@ begin
 			end if;
 		end if;
 	end process;
-	
+
 	mux_clk <= mux_clk_reg;
 	mux_d <= mux_d_reg;
 	mux <= mux_reg;
@@ -677,12 +727,12 @@ begin
 		port map (
 			clk => sysclk,
 			reset => reset,
-			
+
 			ps2_clk_in => ps2_keyboard_clk_in,
 			ps2_dat_in => ps2_keyboard_dat_in,
 			ps2_clk_out => ps2_keyboard_clk_out,
 			ps2_dat_out => ps2_keyboard_dat_out,
-			
+
 			-- Flash caps and num lock LEDs
 			caps_lock => led_green,
 			num_lock => led_red,
@@ -808,250 +858,288 @@ begin
 	end process;
 
 -- -----------------------------------------------------------------------
--- Show state of joysticks on docking-station
--- -----------------------------------------------------------------------
-	process(sysclk) is
-		variable x : signed(11 downto 0);
-		variable y : signed(11 downto 0);
-		variable joysticks : unsigned(23 downto 0);
-	begin
-		x := signed(currentX);
-		y := signed(currentY);
-		if rising_edge(sysclk) then
-			joysticks := docking_joystick4 & docking_joystick3 & docking_joystick2 & docking_joystick1;
-			video_joystick_shift_reg <= '0';
-			for i in 0 to 23 loop
-				if (abs(x - (144 + (i+i/6)*16)) < 5) and (abs(y - 320) < 5) and (joysticks(23-i) = '1') then
-					video_joystick_shift_reg <= '1';
-				elsif (abs(x - (144 + (i+i/6)*16)) = 5) and (abs(y - 320) < 5) then
-					video_joystick_shift_reg <= '1';
-				elsif (abs(x - (144 + (i+i/6)*16)) < 5) and (abs(y - 320) = 5) then
-					video_joystick_shift_reg <= '1';
-				end if;
-			end loop;
-		end if;
-	end process;
-
--- -----------------------------------------------------------------------
--- Show state of C64 keyboard on docking-station
--- -----------------------------------------------------------------------
-	process(sysclk) is
-		variable x : signed(11 downto 0);
-		variable y : signed(11 downto 0);
-	begin
-		x := signed(currentX);
-		y := signed(currentY);
-		if rising_edge(sysclk) then
-			video_keyboard_reg <= '0';
-			for row in 0 to 7 loop
-				for col in 0 to 7 loop
-					box(video_keyboard_reg, x, y, 144 + col*16, 352 + row*16, docking_keys(row*8 + col));
-				end loop;
-			end loop;
-			box(video_keyboard_reg, x, y, 144 + 9*16, 352, docking_restore_n);
-		end if;
-	end process;
-
--- -----------------------------------------------------------------------
 -- VGA colors
 -- -----------------------------------------------------------------------
-	process(sysclk)
-		variable x : signed(11 downto 0);
-		variable y : signed(11 downto 0);
+	vga_colors_blk : block
+		signal vid_joystick_results : std_logic;
+		signal vid_keyboard_results : std_logic;
+		signal vid_mode : std_logic;
+		signal vid_version : std_logic;
 	begin
-		x := signed(currentX);
-		y := signed(currentY);
-		if rising_edge(sysclk) then
-			if end_of_pixel = '1' then
-				red <= (others => '0');
-				grn <= (others => '0');
-				blu <= (others => '0');
-				if currentY < 256 then
-					case currentX(11 downto 7) is
-					when "00001" =>
-						red <= currentX(6 downto 2);
-					when "00010" =>
-						grn <= currentX(6 downto 2);
-					when "00011" =>
-						blu <= currentX(6 downto 2);
-					when "00100" =>
-						red <= currentX(6 downto 2);
-						grn <= currentX(6 downto 2);
-						blu <= currentX(6 downto 2);
-					when others =>
-						null;
-					end case;
-				end if;
-				
-			-- SDRAM check
-				if (currentY >= 256) and (currentY < 272) then
-					if (state = TEST_FILL) or (state = TEST_FILL_W) then
-						if currentX > sdram_a(24 downto 16) then
-							red <= (others => '1');
-							grn <= (others => '1');
-							blu <= (others => '1');
-						else
-							blu <= (others => '1');
-						end if;
-					end if;
-					if (state = TEST_CHECK) or (state = TEST_CHECK_W) then
-						if currentX > sdram_a(24 downto 16) then
-							red <= (others => '1');
-							grn <= (others => '1');
-							blu <= (others => '1');
-						else
-							grn <= (others => '1');
-						end if;
-					end if;
-					if (state = TEST_ERROR) then
-						if currentX > sdram_a(24 downto 16) then
-							red <= "00111";
-						else
-							red <= (others => '1');
-						end if;
-					end if;
-				end if;
-				
-			-- Draw 3 push button tests
-				if (abs(x - 64) < 7) and (abs(y - 64) < 7) and (usart_cts = '0') then
-					blu <= (others => '1');
-				elsif (abs(x - 64) = 7) and (abs(y - 64) < 7) then
-					blu <= (others => '1');
-				elsif (abs(x - 64) < 7) and (abs(y - 64) = 7) then
-					blu <= (others => '1');
-				end if;
+		process(sysclk)
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(currentX);
+			y := signed(currentY);
+			if rising_edge(sysclk) then
+				vid_joystick_results <= '0';
+				drawtext(vid_joystick_results, x, y, 476, 288-5, "3 2 1 R L D U");
+				drawtext(vid_joystick_results, x, y, 416, 304-5, "PORT 1");
+				drawtext(vid_joystick_results, x, y, 416, 320-5, "PORT 2");
+				drawtext(vid_joystick_results, x, y, 416, 336-5, "PORT 3");
+				drawtext(vid_joystick_results, x, y, 416, 352-5, "PORT 4");
+				for i in 0 to 6 loop
+					box(vid_joystick_results, x, y, 480 + i*16, 304, joystick1(6-i));
+					box(vid_joystick_results, x, y, 480 + i*16, 320, joystick2(6-i));
+					box(vid_joystick_results, x, y, 480 + i*16, 336, joystick3(6-i));
+					box(vid_joystick_results, x, y, 480 + i*16, 352, joystick4(6-i));
+				end loop;
+			end if;
+		end process;
 
-				if (abs(x - 96) < 7) and (abs(y - 64) < 7) and (freeze_n = '0') then
-					blu <= (others => '1');
-				elsif (abs(x - 96) = 7) and (abs(y - 64) < 7) then
-					blu <= (others => '1');
-				elsif (abs(x - 96) < 7) and (abs(y - 64) = 7) then
-					blu <= (others => '1');
-				end if;
-
-				if (abs(x - 128) < 7) and (abs(y - 64) < 7) and (reset_button_n = '0') then
-					blu <= (others => '1');
-				elsif (abs(x - 128) = 7) and (abs(y - 64) < 7) then
-					blu <= (others => '1');
-				elsif (abs(x - 128) < 7) and (abs(y - 64) = 7) then
-					blu <= (others => '1');
-				end if;
-
-			-- Draw mouse button tests
-				if (abs(x - 64) < 7) and (abs(y - 128) < 7) and (mouse_left_button = '1') then
-					red <= (others => '1');
-					grn <= (others => '1');
-				elsif (abs(x - 64) = 7) and (abs(y - 128) < 7) then
-					red <= (others => '1');
-					grn <= (others => '1');
-				elsif (abs(x - 64) < 7) and (abs(y - 128) = 7) then
-					red <= (others => '1');
-					grn <= (others => '1');
-				end if;
-
-				if (abs(x - 96) < 7) and (abs(y - 128) < 7) and (mouse_middle_button = '1') then
-					red <= (others => '1');
-					grn <= (others => '1');
-				elsif (abs(x - 96) = 7) and (abs(y - 128) < 7) then
-					red <= (others => '1');
-					grn <= (others => '1');
-				elsif (abs(x - 96) < 7) and (abs(y - 128) = 7) then
-					red <= (others => '1');
-					grn <= (others => '1');
-				end if;
-
-				if (abs(x - 128) < 7) and (abs(y - 128) < 7) and (mouse_right_button = '1') then
-					red <= (others => '1');
-					grn <= (others => '1');
-				elsif (abs(x - 128) = 7) and (abs(y - 128) < 7) then
-					red <= (others => '1');
-					grn <= (others => '1');
-				elsif (abs(x - 128) < 7) and (abs(y - 128) = 7) then
-					red <= (others => '1');
-					grn <= (others => '1');
-				end if;
-			
-			-- clock
-				if (abs(x - 64) < 7) and (abs(y - 192) < 7) and (no_clock = '0') then
-					grn <= (others => '1');
-				elsif (abs(x - 64) = 7) and (abs(y - 192) < 7) then
-					grn <= (others => '1');
-				elsif (abs(x - 64) < 7) and (abs(y - 192) = 7) then
-					grn <= (others => '1');
-				end if;
-
-			-- docking station
-				if (abs(x - 96) < 7) and (abs(y - 192) < 7) and (docking_station = '1') then
-					grn <= (others => '1');
-				elsif (abs(x - 96) = 7) and (abs(y - 192) < 7) then
-					grn <= (others => '1');
-				elsif (abs(x - 96) < 7) and (abs(y - 192) = 7) then
-					grn <= (others => '1');
-				end if;
-				
-			-- IR tester
-				if (abs(x - 128) < 7) and (abs(y - 192) < 7) and (ir = '0') then
-					red <= (others => '1');
-				elsif (abs(x - 128) = 7) and (abs(y - 192) < 7) then
-					red <= (others => '1');
-				elsif (abs(x - 128) < 7) and (abs(y - 192) = 7) then
-					red <= (others => '1');
-				end if;
-
-			-- Draw IEC test pattern
-				for dy in 0 to 5 loop
-					for dx in 0 to 3 loop
-						if abs(x - (64 + (3-dx)*16)) < 5 and (abs(y - (320 + dy*16)) < 5) and (iec_result(dy*4+dx) = '1') then
-							red <= (others => '1');
-							grn <= (others => '1');
-							blu <= (others => '1');
-						elsif abs(x - (64 + (3-dx)*16)) = 5 and (abs(y - (320 + dy*16)) < 5) then
-							red <= (others => '1');
-							grn <= (others => '1');
-							blu <= (others => '1');
-						elsif abs(x - (64 + (3-dx)*16)) < 5 and (abs(y - (320 + dy*16)) = 5) then
-							red <= (others => '1');
-							grn <= (others => '1');
-							blu <= (others => '1');
-						end if;
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(currentX);
+			y := signed(currentY);
+			if rising_edge(sysclk) then
+				vid_keyboard_results <= '0';
+				for row in 0 to 7 loop
+					for col in 0 to 7 loop
+						box(vid_keyboard_results, x, y, 144 + col*16, 352 + row*16, docking_keys(row*8 + col));
 					end loop;
 				end loop;
-				
-				if docking_station = '1' then
-					if video_joystick_shift_reg = '1'
-					or video_keyboard_reg = '1'
-					or video_amiga = '1' then
+				box(vid_keyboard_results, x, y, 144 + 9*16, 352, docking_restore_n);
+			end if;
+		end process;
+
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(currentX);
+			y := signed(currentY);
+			if rising_edge(sysclk) then
+				vid_mode <= '0';
+				if (docking_station = '1') and (docking_version = '0') then
+					drawtext(vid_mode, x, y, 320, 464, "DOCKINGSTATION V1");
+				elsif (docking_station = '1') and (docking_version = '1') then
+					drawtext(vid_mode, x, y, 320, 464, "DOCKINGSTATION V2");
+				elsif no_clock = '1' then
+					drawtext(vid_mode, x, y, 320, 464, "STANDALONE");
+				else
+					drawtext(vid_mode, x, y, 320, 464, "CARTRIDGE");
+				end if;
+			end if;
+		end process;
+
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(currentX);
+			y := signed(currentY);
+			if rising_edge(sysclk) then
+				vid_version <= '0';
+				drawtext(vid_version, x, y, 560, 464, version_str);
+			end if;
+		end process;
+
+		process(sysclk)
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(currentX);
+			y := signed(currentY);
+			if rising_edge(sysclk) then
+				if end_of_pixel = '1' then
+					red <= (others => '0');
+					grn <= (others => '0');
+					blu <= (others => '0');
+					if currentY < 256 then
+						case currentX(11 downto 7) is
+						when "00001" =>
+							red <= currentX(6 downto 2);
+						when "00010" =>
+							grn <= currentX(6 downto 2);
+						when "00011" =>
+							blu <= currentX(6 downto 2);
+						when "00100" =>
+							red <= currentX(6 downto 2);
+							grn <= currentX(6 downto 2);
+							blu <= currentX(6 downto 2);
+						when others =>
+							null;
+						end case;
+					end if;
+
+				-- SDRAM check
+					if (currentY >= 256) and (currentY < 272) then
+						if (state = TEST_FILL) or (state = TEST_FILL_W) then
+							if currentX > sdram_a(24 downto 16) then
+								red <= (others => '1');
+								grn <= (others => '1');
+								blu <= (others => '1');
+							else
+								blu <= (others => '1');
+							end if;
+						end if;
+						if (state = TEST_CHECK) or (state = TEST_CHECK_W) then
+							if currentX > sdram_a(24 downto 16) then
+								red <= (others => '1');
+								grn <= (others => '1');
+								blu <= (others => '1');
+							else
+								grn <= (others => '1');
+							end if;
+						end if;
+						if (state = TEST_ERROR) then
+							if currentX > sdram_a(24 downto 16) then
+								red <= "00111";
+							else
+								red <= (others => '1');
+							end if;
+						end if;
+					end if;
+
+				-- Draw 3 push button tests
+					if (abs(x - 64) < 7) and (abs(y - 64) < 7) and (usart_cts = '0') then
+						blu <= (others => '1');
+					elsif (abs(x - 64) = 7) and (abs(y - 64) < 7) then
+						blu <= (others => '1');
+					elsif (abs(x - 64) < 7) and (abs(y - 64) = 7) then
+						blu <= (others => '1');
+					end if;
+
+					if (abs(x - 96) < 7) and (abs(y - 64) < 7) and (freeze_n = '0') then
+						blu <= (others => '1');
+					elsif (abs(x - 96) = 7) and (abs(y - 64) < 7) then
+						blu <= (others => '1');
+					elsif (abs(x - 96) < 7) and (abs(y - 64) = 7) then
+						blu <= (others => '1');
+					end if;
+
+					if (abs(x - 128) < 7) and (abs(y - 64) < 7) and (reset_button_n = '0') then
+						blu <= (others => '1');
+					elsif (abs(x - 128) = 7) and (abs(y - 64) < 7) then
+						blu <= (others => '1');
+					elsif (abs(x - 128) < 7) and (abs(y - 64) = 7) then
+						blu <= (others => '1');
+					end if;
+
+				-- Draw mouse button tests
+					if (abs(x - 64) < 7) and (abs(y - 128) < 7) and (mouse_left_button = '1') then
+						red <= (others => '1');
+						grn <= (others => '1');
+					elsif (abs(x - 64) = 7) and (abs(y - 128) < 7) then
+						red <= (others => '1');
+						grn <= (others => '1');
+					elsif (abs(x - 64) < 7) and (abs(y - 128) = 7) then
+						red <= (others => '1');
+						grn <= (others => '1');
+					end if;
+
+					if (abs(x - 96) < 7) and (abs(y - 128) < 7) and (mouse_middle_button = '1') then
+						red <= (others => '1');
+						grn <= (others => '1');
+					elsif (abs(x - 96) = 7) and (abs(y - 128) < 7) then
+						red <= (others => '1');
+						grn <= (others => '1');
+					elsif (abs(x - 96) < 7) and (abs(y - 128) = 7) then
+						red <= (others => '1');
+						grn <= (others => '1');
+					end if;
+
+					if (abs(x - 128) < 7) and (abs(y - 128) < 7) and (mouse_right_button = '1') then
+						red <= (others => '1');
+						grn <= (others => '1');
+					elsif (abs(x - 128) = 7) and (abs(y - 128) < 7) then
+						red <= (others => '1');
+						grn <= (others => '1');
+					elsif (abs(x - 128) < 7) and (abs(y - 128) = 7) then
+						red <= (others => '1');
+						grn <= (others => '1');
+					end if;
+
+				-- clock
+					if (abs(x - 64) < 7) and (abs(y - 192) < 7) and (no_clock = '0') then
+						grn <= (others => '1');
+					elsif (abs(x - 64) = 7) and (abs(y - 192) < 7) then
+						grn <= (others => '1');
+					elsif (abs(x - 64) < 7) and (abs(y - 192) = 7) then
+						grn <= (others => '1');
+					end if;
+
+				-- docking station
+					if (abs(x - 96) < 7) and (abs(y - 192) < 7) and (docking_station = '1') then
+						grn <= (others => '1');
+					elsif (abs(x - 96) = 7) and (abs(y - 192) < 7) then
+						grn <= (others => '1');
+					elsif (abs(x - 96) < 7) and (abs(y - 192) = 7) then
+						grn <= (others => '1');
+					end if;
+
+				-- IR tester
+					if (abs(x - 128) < 7) and (abs(y - 192) < 7) and (ir = '0') then
+						red <= (others => '1');
+					elsif (abs(x - 128) = 7) and (abs(y - 192) < 7) then
+						red <= (others => '1');
+					elsif (abs(x - 128) < 7) and (abs(y - 192) = 7) then
+						red <= (others => '1');
+					end if;
+
+				-- Draw IEC test pattern
+					for dy in 0 to 5 loop
+						for dx in 0 to 3 loop
+							if abs(x - (64 + (3-dx)*16)) < 5 and (abs(y - (320 + dy*16)) < 5) and (iec_result(dy*4+dx) = '1') then
+								red <= (others => '1');
+								grn <= (others => '1');
+								blu <= (others => '1');
+							elsif abs(x - (64 + (3-dx)*16)) = 5 and (abs(y - (320 + dy*16)) < 5) then
+								red <= (others => '1');
+								grn <= (others => '1');
+								blu <= (others => '1');
+							elsif abs(x - (64 + (3-dx)*16)) < 5 and (abs(y - (320 + dy*16)) = 5) then
+								red <= (others => '1');
+								grn <= (others => '1');
+								blu <= (others => '1');
+							end if;
+						end loop;
+					end loop;
+
+					if docking_station = '1' then
+						if vid_joystick_results = '1'
+						or vid_keyboard_results = '1'
+						or video_amiga = '1' then
+							red <= (others => '1');
+							grn <= (others => '1');
+							blu <= (others => '1');
+						end if;
+					end if;
+
+					if (vid_mode or vid_version) = '1' then
 						red <= (others => '1');
 						grn <= (others => '1');
 						blu <= (others => '1');
 					end if;
-				end if;
-				
-			-- Draw mouse cursor
-				if mouse_present = '1' then
-					if (abs(x - cursor_x) < 5) and (abs(y - cursor_y) < 5) then
+
+				-- Draw mouse cursor
+					if mouse_present = '1' then
+						if (abs(x - cursor_x) < 5) and (abs(y - cursor_y) < 5) then
+							red <= (others => '1');
+							grn <= (others => '1');
+							blu <= (others => '0');
+						end if;
+					end if;
+
+				--
+				-- One pixel border around the screen
+					if (currentX = 0) or (currentX = 639) or (currentY =0) or (currentY = 479) then
 						red <= (others => '1');
 						grn <= (others => '1');
+						blu <= (others => '1');
+					end if;
+				--
+				-- Never draw pixels outside the visual area
+					if (currentX >= 640) or (currentY >= 480) then
+						red <= (others => '0');
+						grn <= (others => '0');
 						blu <= (others => '0');
 					end if;
 				end if;
-
-			--
-			-- One pixel border around the screen
-				if (currentX = 0) or (currentX = 639) or (currentY =0) or (currentY = 479) then
-					red <= (others => '1');
-					grn <= (others => '1');
-					blu <= (others => '1');
-				end if;
-			--
-			-- Never draw pixels outside the visual area
-				if (currentX >= 640) or (currentY >= 480) then
-					red <= (others => '0');
-					grn <= (others => '0');
-					blu <= (others => '0');
-				end if;
 			end if;
-		end if;
-	end process;
-
+		end process;
+	end block;
 end architecture;

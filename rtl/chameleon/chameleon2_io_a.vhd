@@ -47,10 +47,10 @@ architecture rtl of chameleon2_io is
 	signal c64_q_loc : unsigned(7 downto 0);
 
 -- C64 joystick/keyboard
-	signal c64_joystick1 : unsigned(5 downto 0);
-	signal c64_joystick2 : unsigned(5 downto 0);
-	signal c64_joystick3 : unsigned(5 downto 0);
-	signal c64_joystick4 : unsigned(5 downto 0);
+	signal c64_joystick1 : unsigned(6 downto 0);
+	signal c64_joystick2 : unsigned(6 downto 0);
+	signal c64_joystick3 : unsigned(6 downto 0);
+	signal c64_joystick4 : unsigned(6 downto 0);
 	signal c64_keys : unsigned(63 downto 0);
 
 -- CDTV remote
@@ -76,16 +76,15 @@ architecture rtl of chameleon2_io is
 	signal ir_n : std_logic := '0';
 	signal ir_runstop : std_logic := '0';
 	signal ir_keys : unsigned(63 downto 0);
-	signal ir_joystick1 : unsigned(5 downto 0) := (others => '1');
-	signal ir_joystick2 : unsigned(5 downto 0) := (others => '1');
+	signal ir_joystick1 : unsigned(6 downto 0) := (others => '1');
+	signal ir_joystick2 : unsigned(6 downto 0) := (others => '1');
 
 -- Docking-station
 	signal docking_station_loc : std_logic;
-	signal docking_irq : std_logic;
-	signal docking_joystick1 : unsigned(5 downto 0);
-	signal docking_joystick2 : unsigned(5 downto 0);
-	signal docking_joystick3 : unsigned(5 downto 0);
-	signal docking_joystick4 : unsigned(5 downto 0);
+	signal docking_joystick1 : unsigned(6 downto 0);
+	signal docking_joystick2 : unsigned(6 downto 0);
+	signal docking_joystick3 : unsigned(6 downto 0);
+	signal docking_joystick4 : unsigned(6 downto 0);
 	signal docking_keys : unsigned(63 downto 0);
 	signal docking_amiga_reset_n : std_logic;
 	signal docking_amiga_scancode : unsigned(7 downto 0);
@@ -140,6 +139,7 @@ begin
 				clk => clk,
 
 				docking_station => docking_station_loc,
+				docking_version => docking_version,
 
 				dotclock_n => dotclock_n,
 				io_ef_n => ioef,
@@ -153,8 +153,8 @@ begin
 				keys => docking_keys,
 				restore_key_n => restore_key_n,
 
-				amiga_power_led => '0', -- led_green,
-				amiga_drive_led => '0', -- led_red,
+				amiga_power_led => amiga_power_led,
+				amiga_drive_led => amiga_drive_led,
 				amiga_reset_n => amiga_reset_n,
 				amiga_trigger => amiga_trigger,
 				amiga_scancode => amiga_scancode
@@ -162,6 +162,7 @@ begin
 	end generate;
 
 	noDockingStation : if not enable_docking_station generate
+		docking_version <= '0';
 		docking_joystick1 <= (others => '1');
 		docking_joystick2 <= (others => '1');
 		docking_joystick3 <= (others => '1');
@@ -202,9 +203,13 @@ begin
 				key_vol_up => ir_y,
 				key_vol_dn => ir_n,
 
-				joystick_a => ir_joystick1,
-				joystick_b => ir_joystick2
+				joystick_a => ir_joystick1(5 downto 0),
+				joystick_b => ir_joystick2(5 downto 0)
 			);
+
+			-- IR remote doesn't have thrid fire button
+			ir_joystick1(6) <= '1';
+			ir_joystick2(6) <= '1';
 
 			ir_keys <= (not ir_runstop) & "11" & (not ir_n) & "111" & (not (ir_up or ir_down)) &
 					"1111111" & (not (ir_f5 or ir_f6)) &
@@ -254,12 +259,17 @@ begin
 					d => c64_kb_d,
 					q => c64_kb_q,
 
-					joystick1 => c64_joystick1,
-					joystick2 => c64_joystick2,
-					joystick3 => c64_joystick3,
-					joystick4 => c64_joystick4,
+					joystick1 => c64_joystick1(5 downto 0),
+					joystick2 => c64_joystick2(5 downto 0),
+					joystick3 => c64_joystick3(5 downto 0),
+					joystick4 => c64_joystick4(5 downto 0),
 					keys => c64_keys
 				);
+
+			c64_joystick1(6) <= '1';
+			c64_joystick2(6) <= '1';
+			c64_joystick3(6) <= '1';
+			c64_joystick4(6) <= '1';
 
 			process(clk)
 			begin

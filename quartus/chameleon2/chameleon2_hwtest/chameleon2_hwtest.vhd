@@ -87,10 +87,10 @@
 -- * No key pressed the 8 by 8 matrix should be all '#'
 -- * Press single keys and observe only one hole in 8 by 8 matrix.
 -- * Press restore key. The block on the right side 8 by 8 matrix should open.
--- 
+--
 -- Connect joystick to each joystick port.
--- The joysticks are represented by 4 groups of 6 blocks above 8 by 8 matrix.
--- From left to right the groups of blocks belong to port 4, 3, 2 then 1.
+-- The joysticks are represented by 4 groups of 7 blocks on the lower/right side
+-- of the screen. From top to bottom the groups of blocks belong to port 1, 2, 3 then 4.
 -- * Press Up. The most right block in a group should open.
 -- * Press Down. The block second from the right in a group should open.
 -- * Press Left. The block third from the right in a group should open.
@@ -108,6 +108,7 @@ use work.video_pkg.all;
 -- -----------------------------------------------------------------------
 
 architecture rtl of chameleon2 is
+	constant version_str : string := "20190510";
 	constant reset_cycles : integer := 131071;
 	constant enable_phi2_waveform : boolean := false;
 
@@ -123,6 +124,8 @@ architecture rtl of chameleon2 is
 -- Docking station
 	signal no_clock : std_logic;
 	signal docking_station : std_logic;
+	signal docking_version : std_logic;
+	signal docking_irq : std_logic;
 	signal phi_cnt : unsigned(7 downto 0);
 	signal phi_end_1 : std_logic;
 
@@ -177,14 +180,18 @@ architecture rtl of chameleon2 is
 	signal sigma_r_reg : std_logic := '0';
 
 -- Joysticks
-	signal joystick1 : unsigned(5 downto 0);
-	signal joystick2 : unsigned(5 downto 0);
-	signal joystick3 : unsigned(5 downto 0);
-	signal joystick4 : unsigned(5 downto 0);
+	signal joystick1 : unsigned(6 downto 0);
+	signal joystick2 : unsigned(6 downto 0);
+	signal joystick3 : unsigned(6 downto 0);
+	signal joystick4 : unsigned(6 downto 0);
 
 -- C64 keyboard
 	signal keys : unsigned(63 downto 0);
 	signal restore_n : std_logic;
+
+-- Amiga keyboard
+	signal amiga_reset_n : std_logic;
+	signal amiga_scancode : unsigned(7 downto 0);
 
 -- Video pipeline
 	signal end_of_line : std_logic;
@@ -204,6 +211,58 @@ architecture rtl of chameleon2 is
 	signal vga_master : stage_t;
 	signal vga_colors : stage_t;
 
+	procedure drawtext(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; t : string) is
+		variable ch : character;
+		variable pixels : unsigned(0 to 63);
+	begin
+		if (x >= xpos) and ((x - xpos) < 8*t'length)
+		and (y >= ypos) and ((y - ypos) < 8) then
+			pixels := (others => '0');
+			ch := t(1 + (to_integer(x-xpos) / 8));
+			case ch is
+			when ''' => pixels := X"0808000000000000";
+			when '.' => pixels := X"00000000000C0C00";
+--			when '/' => pixels := X"0002040810204000";
+			when '0' => pixels := X"1C22222A22221C00";
+			when '1' => pixels := X"0818080808081C00";
+			when '2' => pixels := X"1C22020408103E00";
+			when '3' => pixels := X"1C22020C02221C00";
+			when '4' => pixels := X"0C14243E04040E00";
+			when '5' => pixels := X"3E20203C02221C00";
+			when '6' => pixels := X"1C20203C22221C00";
+			when '7' => pixels := X"3E02040810101000";
+			when '8' => pixels := X"1C22221C22221C00";
+			when '9' => pixels := X"1C22221E02021C00";
+			when ':' => pixels := X"000C0C000C0C0000";
+			when 'A' => pixels := X"1C22223E22222200";
+			when 'B' => pixels := X"3C22223C22223C00";
+			when 'C' => pixels := X"1C22202020221C00";
+			when 'D' => pixels := X"3C22222222223C00";
+			when 'E' => pixels := X"3E20203C20203E00";
+			when 'F' => pixels := X"3E20203C20202000";
+			when 'G' => pixels := X"1C22202E22221C00";
+			when 'H' => pixels := X"2222223E22222200";
+			when 'I' => pixels := X"1C08080808081C00";
+			when 'K' => pixels := X"2222243824222200";
+			when 'L' => pixels := X"1010101010101E00";
+			when 'M' => pixels := X"4163554941414100";
+			when 'N' => pixels := X"22322A2A26222200";
+			when 'O' => pixels := X"1C22222222221C00";
+			when 'P' => pixels := X"1C12121C10101000";
+			when 'R' => pixels := X"3C22223C28242200";
+			when 'S' => pixels := X"1C22201C02221C00";
+			when 'T' => pixels := X"3E08080808080800";
+			when 'U' => pixels := X"2222222222221C00";
+			when 'V' => pixels := X"2222221414080800";
+			when 'W' => pixels := X"4141412A2A141400";
+			when 'Y' => pixels := X"2222140808080800";
+			when others =>
+				null;
+			end case;
+			video <= pixels(to_integer(y - ypos) * 8 + (to_integer(x - xpos) mod 8));
+		end if;
+	end procedure;
+
 	procedure box(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; value : std_logic) is
 	begin
 		if (abs(x - xpos) < 5) and (abs(y - ypos) < 5) and (value = '1') then
@@ -220,6 +279,7 @@ begin
 -- -----------------------------------------------------------------------
 	clock_ior <= '1';
 	clock_iow <= '1';
+	irq_out <= not docking_irq;
 
 -- -----------------------------------------------------------------------
 -- PLL
@@ -556,6 +616,8 @@ begin
 
 				no_clock => no_clock,
 				docking_station => docking_station,
+				docking_version => docking_version,
+				docking_irq => docking_irq,
 
 				phi_cnt => phi_cnt,
 				phi_end_1 => phi_end_1,
@@ -565,32 +627,13 @@ begin
 				joystick3 => joystick3,
 				joystick4 => joystick4,
 				keys => keys,
-				restore_key_n => restore_n
+				restore_key_n => restore_n,
+				amiga_power_led => led_red,
+				amiga_drive_led => led_green,
+				amiga_reset_n => amiga_reset_n,
+				amiga_scancode => amiga_scancode
 			);
 	end block;
-	-- myDockingStation : entity work.chameleon_docking_station
-		-- port map (
-			-- clk => sysclk,
-
-			-- docking_station => docking_station,
-
-			-- dotclock_n => dotclock_n,
-			-- io_ef_n => ioef_n,
-			-- rom_lh_n => romlh_n,
-			-- irq_q => docking_irq,
-
-			-- joystick1 => docking_joystick1,
-			-- joystick2 => docking_joystick2,
-			-- joystick3 => docking_joystick3,
-			-- joystick4 => docking_joystick4,
-			-- keys => docking_keys,
-			-- restore_key_n => docking_restore_n,
-
-			-- amiga_power_led => led_green,
-			-- amiga_drive_led => led_red,
-			-- amiga_reset_n => docking_amiga_reset_n,
-			-- amiga_scancode => docking_amiga_scancode
-		-- );
 
 -- -----------------------------------------------------------------------
 -- Phi_2 waveform check
@@ -805,6 +848,9 @@ begin
 		signal vid_iec_results : std_logic;
 		signal vid_joystick_results : std_logic;
 		signal vid_keyboard_results : std_logic;
+		signal vid_amiga_results : std_logic;
+		signal vid_mode : std_logic;
+		signal vid_version : std_logic;
 	begin
 		vga_colors <= vga_colors_reg;
 
@@ -906,11 +952,16 @@ begin
 			y := signed(vga_master.y);
 			if rising_edge(sysclk) then
 				vid_joystick_results <= '0';
-				for i in 0 to 5 loop
-					box(vid_joystick_results, x, y, 144 + i*16, 288, joystick4(5-i));
-					box(vid_joystick_results, x, y, 256 + i*16, 288, joystick3(5-i));
-					box(vid_joystick_results, x, y, 368 + i*16, 288, joystick2(5-i));
-					box(vid_joystick_results, x, y, 480 + i*16, 288, joystick1(5-i));
+				drawtext(vid_joystick_results, x, y, 476, 288-5, "3 2 1 R L D U");
+				drawtext(vid_joystick_results, x, y, 416, 304-5, "PORT 1");
+				drawtext(vid_joystick_results, x, y, 416, 320-5, "PORT 2");
+				drawtext(vid_joystick_results, x, y, 416, 336-5, "PORT 3");
+				drawtext(vid_joystick_results, x, y, 416, 352-5, "PORT 4");
+				for i in 0 to 6 loop
+					box(vid_joystick_results, x, y, 480 + i*16, 304, joystick1(6-i));
+					box(vid_joystick_results, x, y, 480 + i*16, 320, joystick2(6-i));
+					box(vid_joystick_results, x, y, 480 + i*16, 336, joystick3(6-i));
+					box(vid_joystick_results, x, y, 480 + i*16, 352, joystick4(6-i));
 				end loop;
 			end if;
 		end process;
@@ -929,6 +980,53 @@ begin
 					end loop;
 				end loop;
 				box(vid_keyboard_results, x, y, 144 + 9*16, 352, restore_n);
+			end if;
+		end process;
+
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(vga_master.x);
+			y := signed(vga_master.y);
+			if rising_edge(sysclk) then
+				vid_amiga_results <= '0';
+				box(vid_amiga_results, x, y, 144 + 9*16, 288, amiga_reset_n);
+				for i in 0 to 7 loop
+					box(vid_amiga_results, x, y, 144 + i*16, 288, amiga_scancode(7-i));
+				end loop;
+			end if;
+		end process;
+
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(vga_master.x);
+			y := signed(vga_master.y);
+			if rising_edge(sysclk) then
+				vid_mode <= '0';
+				if (docking_station = '1') and (docking_version = '0') then
+					drawtext(vid_mode, x, y, 320, 464, "DOCKINGSTATION V1");
+				elsif (docking_station = '1') and (docking_version = '1') then
+					drawtext(vid_mode, x, y, 320, 464, "DOCKINGSTATION V2");
+				elsif no_clock = '1' then
+					drawtext(vid_mode, x, y, 320, 464, "STANDALONE");
+				else
+					drawtext(vid_mode, x, y, 320, 464, "CARTRIDGE");
+				end if;
+			end if;
+		end process;
+
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(vga_master.x);
+			y := signed(vga_master.y);
+			if rising_edge(sysclk) then
+				vid_version <= '0';
+				drawtext(vid_version, x, y, 560, 464, version_str);
 			end if;
 		end process;
 
@@ -1063,7 +1161,10 @@ begin
 					or vid_docking_mode
 					or vid_iec_results
 					or vid_joystick_results
-					or vid_keyboard_results) = '1' then
+					or vid_keyboard_results
+					or vid_amiga_results
+					or vid_mode
+					or vid_version) = '1' then
 						vga_colors_reg.r <= (others => '1');
 						vga_colors_reg.g <= (others => '1');
 						vga_colors_reg.b <= (others => '1');

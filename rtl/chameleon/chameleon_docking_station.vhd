@@ -29,6 +29,8 @@
 -- clk             - system clock
 -- docking_station - must be high when docking-station is available.
 --                   This can be determined by the state of the phi2 pin.
+-- docking_version - '0' first version, supports 2 fire buttons on each port
+--                   '1' second version, 3 fire buttons on each port and midi in/out
 -- dotclock_n      - Connect to the dotclock_n pin.
 -- io_ef_n         - Connect to the io_ef_n pin.
 -- rom_hl_n        - Connect to the rom_hl_n pin.
@@ -54,23 +56,24 @@ entity chameleon_docking_station is
 	port (
 		clk : in std_logic;
 		docking_station : in std_logic;
+		docking_version : out std_logic;
 
 		dotclock_n : in std_logic;
 		io_ef_n : in std_logic;
 		rom_lh_n : in std_logic;
 		irq_q : out std_logic;
-		
-		joystick1 : out unsigned(5 downto 0);
-		joystick2 : out unsigned(5 downto 0);
-		joystick3 : out unsigned(5 downto 0);
-		joystick4 : out unsigned(5 downto 0);
+
+		joystick1 : out unsigned(6 downto 0);
+		joystick2 : out unsigned(6 downto 0);
+		joystick3 : out unsigned(6 downto 0);
+		joystick4 : out unsigned(6 downto 0);
 		--  0 = col0, row0
 		--  1 = col1, row0
 		--  8 = col0, row1
 		-- 63 = col7, row7
 		keys : out unsigned(63 downto 0);
 		restore_key_n : out std_logic;
-		
+
 	-- Amiga keyboard
 		amiga_power_led : in std_logic;
 		amiga_drive_led : in std_logic;
@@ -86,27 +89,29 @@ architecture rtl of chameleon_docking_station is
 	constant shift_reg_bits : integer := 13*8;
 	-- We put the out-of-sync detection just before the actual sync-pulse.
 	-- Gives it the biggest chance of catching a sync-problem.
-	constant out_of_sync_pos : integer := 102; 
+	constant out_of_sync_pos : integer := 102;
 	signal shift_reg : unsigned(shift_reg_bits-1 downto 0);
 	signal bit_cnt : unsigned(7 downto 0) := (others => '0');
 	signal once : std_logic := '0';
 
+	signal docking_version_reg : std_logic := '0';
 	signal key_reg : unsigned(63 downto 0) := (others => '1');
 	signal restore_n_reg : std_logic := '1';
-	signal joystick1_reg : unsigned(5 downto 0) := (others => '0');
-	signal joystick2_reg : unsigned(5 downto 0) := (others => '0');
-	signal joystick3_reg : unsigned(5 downto 0) := (others => '0');
-	signal joystick4_reg : unsigned(5 downto 0) := (others => '0');
+	signal joystick1_reg : unsigned(6 downto 0) := (others => '0');
+	signal joystick2_reg : unsigned(6 downto 0) := (others => '0');
+	signal joystick3_reg : unsigned(6 downto 0) := (others => '0');
+	signal joystick4_reg : unsigned(6 downto 0) := (others => '0');
 	signal dotclock_n_reg : std_logic := '0';
 	signal dotclock_n_dly : std_logic := '0';
 	signal io_ef_n_reg : std_logic := '0';
 	signal rom_lh_n_reg : std_logic := '1';
 	signal irq_q_reg : std_logic := '1';
-	
+
 	signal amiga_reset_n_reg : std_logic := '0';
 	signal amiga_trigger_reg : std_logic := '0';
 	signal amiga_scancode_reg : unsigned(7 downto 0) := (others => '0');
 begin
+	docking_version <= docking_version_reg;
 	joystick1 <= joystick1_reg;
 	joystick2 <= joystick2_reg;
 	joystick3 <= joystick3_reg;
@@ -151,7 +156,7 @@ begin
 			end if;
 		end if;
 	end process;
-	
+
 	--
 	-- Amiga keyboard LED control
 	process(clk) is
@@ -173,11 +178,24 @@ begin
 	begin
 		if rising_edge(clk) then
 			if bit_cnt = shift_reg_bits then
+				-- Docking-station and protocol version information
+				docking_version_reg <= shift_reg(3);
+
 				-- Map shifted bits to joysticks
-				joystick1_reg <= shift_reg(101 downto 96);
-				joystick2_reg <= shift_reg(85 downto 80);
-				joystick3_reg <= shift_reg(102)& shift_reg(103) & shift_reg(92) & shift_reg(93) & shift_reg(94) & shift_reg(95);
-				joystick4_reg <= shift_reg(86) & shift_reg(87) & shift_reg(88) & shift_reg(89) & shift_reg(90) & shift_reg(91);
+				joystick1_reg <=
+					(shift_reg(4) or (not shift_reg(3))) &
+					shift_reg(101 downto 96);
+				joystick2_reg <=
+					(shift_reg(5) or (not shift_reg(3))) &
+					shift_reg(85 downto 80);
+				joystick3_reg <=
+					(shift_reg(6) or (not shift_reg(3))) &
+					shift_reg(102) & shift_reg(103) &
+					shift_reg(92) & shift_reg(93) & shift_reg(94) & shift_reg(95);
+				joystick4_reg <=
+					(shift_reg(7) or (not shift_reg(3))) &
+					shift_reg(86) & shift_reg(87) &
+					shift_reg(88) & shift_reg(89) & shift_reg(90) & shift_reg(91);
 				restore_n_reg <= shift_reg(1);
 
 				-- Map shifted bits to C64 keyboard
@@ -193,7 +211,7 @@ begin
 					-- Relase all keyboard keys while joystick button(s) are pressed.
 					key_reg <= (others => '1');
 				end if;
-				
+
 				-- Amiga keyboard
 				amiga_reset_n_reg <= shift_reg(2);
 				if shift_reg(0) = '1' then
@@ -209,6 +227,7 @@ begin
 			-- No docking station connected.
 			-- Disable all outputs to prevent conflicts.
 			if docking_station = '0' then
+				docking_version_reg <= '0';
 				joystick1_reg <= (others => '1');
 				joystick2_reg <= (others => '1');
 				joystick3_reg <= (others => '1');

@@ -266,10 +266,10 @@ begin
 			button_reset_n => button_reset_n,
 
 		-- Joysticks
-			joystick1 => joystick1,
-			joystick2 => joystick2,
-			joystick3 => joystick3,
-			joystick4 => joystick4,
+			joystick1(joystick1'range) => joystick1,
+			joystick2(joystick2'range) => joystick2,
+			joystick3(joystick3'range) => joystick3,
+			joystick4(joystick4'range) => joystick4,
 
 		-- Keyboards
 			keys => keys,
