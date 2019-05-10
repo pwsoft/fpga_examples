@@ -91,6 +91,9 @@
 --           7.. 0 -  1             +                               Inst/Del
 -- restore_key_n   - Trigger for restore key on docking-station.
 --                   On a C64 the restore key is wired to the NMI line instead.
+--
+-- midi_txd        - Midi transmit data ('1' at rest, '0' drives output)
+-- midi_rxd        - Midi receive data ('1' at rest, '0' when current flows through opto)
 -- -----------------------------------------------------------------------
 
 library ieee;
@@ -187,6 +190,10 @@ entity chameleon2_io is
 		amiga_drive_led : in std_logic := '0';
 		amiga_reset_n : out std_logic;
 		amiga_trigger : out std_logic;
-		amiga_scancode : out unsigned(7 downto 0)
+		amiga_scancode : out unsigned(7 downto 0);
+
+-- MIDI (only available on Docking-station V2)
+		midi_txd : in std_logic := '1';
+		midi_rxd : out std_logic
 	);
 end entity;

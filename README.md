@@ -48,6 +48,7 @@ Various vhdl files to be reused in other designs.
     * gen_pipeline.vhd, Configurable pipeline building block.
     * gen_register.vhd, Register example.
     * gen_reset.vhd, Power-on reset circuit with manual reset button input.
+    * gen_uart.vhd, Simple fixed baudrate asynchronous serial receiver/transmitter
     * gen_usart.vhd, Synchronous serial receiver/transmitter
 * rtl/ps2. Design files to add support for PS/2 keyboards and PS/2 mice.
     * io_ps2_com.vhd, Lowlevel PS/2 driver. Allowes receiving and sending bytes to PS/2 devices.

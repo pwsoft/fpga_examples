@@ -53,6 +53,7 @@ set_global_assignment -name VHDL_FILE $rtlpath/audio/audio_sigmadelta_dac.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/general/fractal_noise.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/general/gen_pipeline.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/general/gen_reset.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/general/gen_uart.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/general/gen_usart.vhd
 
 # IO controllers

@@ -81,6 +81,7 @@ architecture rtl of chameleon2_io is
 
 -- Docking-station
 	signal docking_station_loc : std_logic;
+	signal docking_version_loc : std_logic;
 	signal docking_joystick1 : unsigned(6 downto 0);
 	signal docking_joystick2 : unsigned(6 downto 0);
 	signal docking_joystick3 : unsigned(6 downto 0);
@@ -91,6 +92,7 @@ architecture rtl of chameleon2_io is
 begin
 	no_clock <= no_clock_loc;
 	docking_station <= docking_station_loc;
+	docking_version <= docking_version_loc;
 
 	phi_out <= phi;
 	phi_end_0 <= end_of_phi_0;
@@ -103,6 +105,8 @@ begin
 	joystick3 <= docking_joystick3 and c64_joystick3;
 	joystick4 <= docking_joystick4 and c64_joystick4;
 	keys <= docking_keys and c64_keys and ir_keys;
+
+	midi_rxd <= ba_in or (not docking_station_loc) or (not docking_version_loc);
 
 -- -----------------------------------------------------------------------
 -- PHI2 clock sync
@@ -139,7 +143,7 @@ begin
 				clk => clk,
 
 				docking_station => docking_station_loc,
-				docking_version => docking_version,
+				docking_version => docking_version_loc,
 
 				dotclock_n => dotclock_n,
 				io_ef_n => ioef,
@@ -489,6 +493,11 @@ begin
 					low_d_out_reg <= c64_d_loc;
 					state_reg <= BUS_WAIT_PHI0;
 				end case;
+
+				if (no_clock_loc = '1') and (docking_station_loc = '1') and (docking_version_loc = '1') then
+					-- GAME line is MIDI out on docking-station V2
+					game_out_reg <= not midi_txd;
+				end if;
 			end if;
 		end process;
 

@@ -118,6 +118,7 @@ architecture rtl of chameleon2 is
 	--signal clk_video : std_logic;
 	signal ena_1mhz : std_logic;
 	signal ena_1khz : std_logic;
+	signal ena_1sec : std_logic;
 
 	signal reset : std_logic;
 
@@ -193,6 +194,11 @@ architecture rtl of chameleon2 is
 	signal amiga_reset_n : std_logic;
 	signal amiga_scancode : unsigned(7 downto 0);
 
+-- MIDI
+	signal midi_txd : std_logic;
+	signal midi_rxd : std_logic;
+	signal midi_data : unsigned(63 downto 0);
+
 -- Video pipeline
 	signal end_of_line : std_logic;
 	signal end_of_frame : std_logic;
@@ -210,6 +216,40 @@ architecture rtl of chameleon2 is
 		end record;
 	signal vga_master : stage_t;
 	signal vga_colors : stage_t;
+
+	procedure drawunsigned(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; t : unsigned) is
+		variable index : integer;
+		variable nibble : unsigned(3 downto 0);
+		variable pixels : unsigned(0 to 63);
+	begin
+		if (x >= xpos) and ((x - xpos) < 2*t'length)
+		and (y >= ypos) and ((y - ypos) < 8) then
+			pixels := (others => '0');
+			index := (t'length/4-1) - to_integer(x-xpos) / 8;
+			nibble := t(index*4+3 downto index*4);
+			case nibble is
+			when X"0" => pixels := X"1C22222A22221C00";
+			when X"1" => pixels := X"0818080808081C00";
+			when X"2" => pixels := X"1C22020408103E00";
+			when X"3" => pixels := X"1C22020C02221C00";
+			when X"4" => pixels := X"0C14243E04040E00";
+			when X"5" => pixels := X"3E20203C02221C00";
+			when X"6" => pixels := X"1C20203C22221C00";
+			when X"7" => pixels := X"3E02040810101000";
+			when X"8" => pixels := X"1C22221C22221C00";
+			when X"9" => pixels := X"1C22221E02021C00";
+			when X"A" => pixels := X"1C22223E22222200";
+			when X"B" => pixels := X"3C22223C22223C00";
+			when X"C" => pixels := X"1C22202020221C00";
+			when X"D" => pixels := X"3C22222222223C00";
+			when X"E" => pixels := X"3E20203C20203E00";
+			when X"F" => pixels := X"3E20203C20202000";
+			when others =>
+				null;
+			end case;
+			video <= pixels(to_integer(y - ypos) * 8 + (to_integer(x - xpos) mod 8));
+		end if;
+	end procedure;
 
 	procedure drawtext(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; t : string) is
 		variable ch : character;
@@ -318,6 +358,13 @@ begin
 			clk => sysclk,
 			ena_1mhz => ena_1mhz,
 			ena_1khz => ena_1khz
+		);
+
+	ena1sec_inst : entity work.chameleon_1khz
+		port map (
+			clk => sysclk,
+			ena_1mhz => ena_1khz,
+			ena_1khz => ena_1sec
 		);
 
 -- -----------------------------------------------------------------------
@@ -631,7 +678,10 @@ begin
 				amiga_power_led => led_red,
 				amiga_drive_led => led_green,
 				amiga_reset_n => amiga_reset_n,
-				amiga_scancode => amiga_scancode
+				amiga_scancode => amiga_scancode,
+
+				midi_txd => midi_txd,
+				midi_rxd => midi_rxd
 			);
 	end block;
 
@@ -802,6 +852,61 @@ begin
 	end process;
 
 -- -----------------------------------------------------------------------
+-- Midi ports on Docking-station V2
+-- -----------------------------------------------------------------------
+	midi_blk : block
+		signal empty : std_logic;
+
+		signal uart_d : unsigned(7 downto 0) := (others => '0');
+		signal uart_d_trig : std_logic;
+		signal uart_q : unsigned(7 downto 0);
+		signal uart_q_trig : std_logic;
+		signal midi_data_reg : unsigned(63 downto 0) := (others => '0');
+	begin
+		midi_data <= midi_data_reg;
+
+		uart_inst : entity work.gen_uart
+			generic map (
+				bits => 8,
+				baud => 31250,
+				ticksPerUsec => 100
+			)
+			port map (
+				clk => sysclk,
+
+				d => uart_d,
+				d_trigger => uart_d_trig,
+				d_empty => empty,
+
+				q => uart_q,
+				q_trigger => uart_q_trig,
+
+				serial_rxd => midi_rxd,
+				serial_txd => midi_txd
+			);
+
+		process(sysclk)
+		begin
+			if rising_edge(sysclk) then
+				if uart_q_trig = '1' then
+					midi_data_reg <= midi_data_reg(55 downto 0) & uart_q;
+				end if;
+			end if;
+		end process;
+
+		process(sysclk)
+		begin
+			if rising_edge(sysclk) then
+				uart_d_trig <= '0';
+				if ena_1sec = '1' then
+					uart_d <= uart_d + 1;
+					uart_d_trig <= '1';
+				end if;
+			end if;
+		end process;
+	end block;
+
+-- -----------------------------------------------------------------------
 -- Video timing 640x480
 -- -----------------------------------------------------------------------
 	vga_master_inst : entity work.video_vga_master
@@ -849,6 +954,7 @@ begin
 		signal vid_joystick_results : std_logic;
 		signal vid_keyboard_results : std_logic;
 		signal vid_amiga_results : std_logic;
+		signal vid_midi_results : std_logic;
 		signal vid_mode : std_logic;
 		signal vid_version : std_logic;
 	begin
@@ -995,6 +1101,21 @@ begin
 				for i in 0 to 7 loop
 					box(vid_amiga_results, x, y, 144 + i*16, 288, amiga_scancode(7-i));
 				end loop;
+			end if;
+		end process;
+
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(vga_master.x);
+			y := signed(vga_master.y);
+			if rising_edge(sysclk) then
+				vid_midi_results <= '0';
+				if docking_version = '1' then
+					drawtext(vid_midi_results, x, y, 320, 400, "MIDI:");
+					drawunsigned(vid_midi_results, x, y, 320, 408, midi_data);
+				end if;
 			end if;
 		end process;
 
@@ -1163,6 +1284,7 @@ begin
 					or vid_joystick_results
 					or vid_keyboard_results
 					or vid_amiga_results
+					or vid_midi_results
 					or vid_mode
 					or vid_version) = '1' then
 						vga_colors_reg.r <= (others => '1');
