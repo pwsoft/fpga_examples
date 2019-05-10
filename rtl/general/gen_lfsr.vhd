@@ -3,7 +3,7 @@
 -- Syntiac's generic VHDL support files.
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2011 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2019 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/vhdl_lib.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -64,7 +64,7 @@ end entity;
 architecture rtl of gen_lfsr is
 	signal shift_reg : unsigned(bits-1 downto 0) := (others => '0');
 	
-	function feedback return std_logic is
+	function feedback(sr : in unsigned(bits-1 downto 0)) return std_logic is
 		variable result : std_logic;
 	begin
 		result := '0';
@@ -72,29 +72,29 @@ architecture rtl of gen_lfsr is
 		-- Take note the application note counts bits from 1. Here we count from 0, so all the indexes are 1 lower.
 		case bits is
 		when 3 | 4 | 6 | 7 | 15 | 22 | 60 | 63 | 127 =>
-			result := shift_reg(bits-1) xnor shift_reg(bits-2);
+			result := sr(bits-1) xnor sr(bits-2);
 		when 5 =>
-			result := shift_reg(bits-1) xnor shift_reg(2);
+			result := sr(bits-1) xnor sr(2);
 		when 8 =>
-			result := shift_reg(bits-1) xnor shift_reg(5) xnor shift_reg(4) xnor shift_reg(3);
+			result := sr(bits-1) xnor sr(5) xnor sr(4) xnor sr(3);
 		when 9 =>
-			result := shift_reg(bits-1) xnor shift_reg(4);
+			result := sr(bits-1) xnor sr(4);
 		when 10 =>
-			result := shift_reg(bits-1) xnor shift_reg(6);
+			result := sr(bits-1) xnor sr(6);
 		when 11 =>
-			result := shift_reg(bits-1) xnor shift_reg(8);
+			result := sr(bits-1) xnor sr(8);
 		when 12 =>
-			result := shift_reg(bits-1) xnor shift_reg(5) xnor shift_reg(3) xnor shift_reg(0);
+			result := sr(bits-1) xnor sr(5) xnor sr(3) xnor sr(0);
 		when 13 =>
-			result := shift_reg(bits-1) xnor shift_reg(3) xnor shift_reg(2) xnor shift_reg(0);
+			result := sr(bits-1) xnor sr(3) xnor sr(2) xnor sr(0);
 		when 14 =>
-			result := shift_reg(bits-1) xnor shift_reg(4) xnor shift_reg(2) xnor shift_reg(0);
+			result := sr(bits-1) xnor sr(4) xnor sr(2) xnor sr(0);
 		when 16 =>
-			result := shift_reg(bits-1) xnor shift_reg(14) xnor shift_reg(12) xnor shift_reg(3);
+			result := sr(bits-1) xnor sr(14) xnor sr(12) xnor sr(3);
 		when 17 =>
-			result := shift_reg(bits-1) xnor shift_reg(13);
+			result := sr(bits-1) xnor sr(13);
 		when 18 =>
-			result := shift_reg(bits-1) xnor shift_reg(10);
+			result := sr(bits-1) xnor sr(10);
 		when others =>
 			assert(false);
 		end case;
@@ -107,7 +107,7 @@ begin
 	begin
 		if rising_edge(clk) then
 			if stop = '0' then
-				shift_reg <= shift_reg(bits-2 downto 0) & feedback;
+				shift_reg <= shift_reg(bits-2 downto 0) & feedback(shift_reg);
 			end if;
 			if load = '1' then
 				shift_reg <= d;
