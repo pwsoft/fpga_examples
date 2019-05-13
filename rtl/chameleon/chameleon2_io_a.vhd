@@ -263,17 +263,12 @@ begin
 					d => c64_kb_d,
 					q => c64_kb_q,
 
-					joystick1 => c64_joystick1(5 downto 0),
-					joystick2 => c64_joystick2(5 downto 0),
-					joystick3 => c64_joystick3(5 downto 0),
-					joystick4 => c64_joystick4(5 downto 0),
+					joystick1 => c64_joystick1,
+					joystick2 => c64_joystick2,
+					joystick3 => c64_joystick3,
+					joystick4 => c64_joystick4,
 					keys => c64_keys
 				);
-
-			c64_joystick1(6) <= '1';
-			c64_joystick2(6) <= '1';
-			c64_joystick3(6) <= '1';
-			c64_joystick4(6) <= '1';
 
 			process(clk)
 			begin

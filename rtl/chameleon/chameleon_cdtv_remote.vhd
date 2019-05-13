@@ -117,6 +117,7 @@ architecture rtl of chameleon_cdtv_remote is
 		);
 	signal state : state_t := STATE_IDLE;
 	
+	signal ir_reg : std_logic := '1';
 	signal pre_trigger : std_logic := '0'; -- trigger out 1 clock later to sync with decoding logic
 	signal timer : integer range 0 to long_timeout := 0;
 	signal bitlength : integer range 0 to 16000 := 0;
@@ -129,11 +130,12 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
+			ir_reg <= ir;
 			pre_trigger <= '0';
 		-- State machine
 			case state is
 			when STATE_IDLE =>
-				if (ir = '1') and (bitlength > 8500) then
+				if (ir_reg = '1') and (bitlength > 8500) then
 					state <= STATE_START;
 				end if;
 				bitcount <= 0;
@@ -143,21 +145,21 @@ begin
 				state <= STATE_WAIT_REPEAT;
 				bitcount <= 0;
 			when STATE_WAIT_REPEAT =>
-				if (ir = '1') and (bitlength > 8500) then
+				if (ir_reg = '1') and (bitlength > 8500) then
 					state <= STATE_START;
 				end if;
 				bitcount <= 0;
 			when STATE_START =>
-				if (ir = '0') and (bitlength > 1500) and (bitlength < 3000) then
+				if (ir_reg = '0') and (bitlength > 1500) and (bitlength < 3000) then
 					-- It is a key-held code. No further processing.
 					state <= STATE_END_CODE;
 				end if;
-				if (ir = '0') and (bitlength >= 3000) then
+				if (ir_reg = '0') and (bitlength >= 3000) then
 					state <= STATE_LOW;
 				end if;
 				bitcount <= 0;
 			when STATE_LOW =>
-				if ir = '1' then
+				if ir_reg = '1' then
 					state <= STATE_HIGH;
 				end if;
 				if bitcount = 24 then
@@ -169,7 +171,7 @@ begin
 					end if;
 				end if;
 			when STATE_HIGH =>
-				if ir = '0' then
+				if ir_reg = '0' then
 					state <= STATE_LOW;
 					bitcount <= bitcount + 1;
 					if bitlength > 800 then
@@ -183,8 +185,8 @@ begin
 			end case;
 
 		-- Determine bit-length
-			if (ir = '1' and ((state = STATE_IDLE) or (state = STATE_WAIT_REPEAT) or (state = STATE_LOW)))
-			or (ir = '0' and ((state = STATE_START) or (state = STATE_HIGH))) then
+			if (ir_reg = '1' and ((state = STATE_IDLE) or (state = STATE_WAIT_REPEAT) or (state = STATE_LOW)))
+			or (ir_reg = '0' and ((state = STATE_START) or (state = STATE_HIGH))) then
 				bitlength <= 0;
 			elsif ena_1mhz = '1' then
 				bitlength <= bitlength + 1;
@@ -271,10 +273,4 @@ begin
 			end if;
 		end if;	
 	end process;
-
 end architecture;
-
-
-
-
-

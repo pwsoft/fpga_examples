@@ -41,7 +41,7 @@
 -- -----------------------------------------------------------------------
 -- enable_docking_station - Enable support for the docking-station.
 -- enable_cdtv_remove     - Enable support for the cdtv remote. CDTV will be mapped to first
---                          to joysticks and the "keys" array when set to true. Otherwise
+--                          two joysticks and the "keys" array when set to true. Otherwise
 --                          the raw ir signal is also available for external decoding.
 -- enable_c64_joykeyb     - Automatically read joystick and keyboard on the C64 bus.
 --                          Take note this disables the C64 bus access feature on this entity.
@@ -111,7 +111,6 @@
 -- button_reset_n  - Status of blue reset button (right button) on the Chameleon. Low active.
 -- joystick*       - Joystick ports of both docking-station and C64.
 --                   Bits: fire3, fire2, fire1, right, left, down, up
---                   The C64 only supports one button fire1. The signals are low active
 --
 -- keys            - C64 keyboard. One bit for each key on the keyboard. Low active.
 --          63..56 -  RUN/S   /     ,     N    V    X     LSHFT     UPDN
@@ -361,8 +360,8 @@ architecture rtl of chameleon_io is
 	signal ir_middle_button : std_logic := '0';
 	signal ir_right_button : std_logic := '0';
 	signal ir_arrowleft : std_logic := '0';
-	signal ir_plus : std_logic := '0';
-	signal ir_minus : std_logic := '0';
+	signal ir_y : std_logic := '0';
+	signal ir_n : std_logic := '0';
 	signal ir_runstop : std_logic := '0';
 	signal ir_keys : unsigned(63 downto 0);
 	signal ir_joystick1 : unsigned(6 downto 0) := (others => '1');
@@ -370,6 +369,7 @@ architecture rtl of chameleon_io is
 
 -- Docking-station
 	signal docking_station_loc : std_logic;
+	signal docking_version_loc : std_logic;
 	signal docking_irq : std_logic;
 	signal docking_joystick1 : unsigned(6 downto 0);
 	signal docking_joystick2 : unsigned(6 downto 0);
@@ -397,6 +397,7 @@ begin
 	reset_ext <= reset_in;
 	no_clock <= no_clock_loc;
 	docking_station <= docking_station_loc;
+	docking_version <= docking_version_loc;
 	button_reset_n <= button_reset_n_reg;
 	--
 	phi_out <= phi;
@@ -450,7 +451,7 @@ begin
 				clk => clk,
 
 				docking_station => docking_station_loc,
-				docking_version => docking_version,
+				docking_version => docking_version_loc,
 
 				dotclock_n => dotclock_n,
 				io_ef_n => io_ef_n,
@@ -511,8 +512,8 @@ begin
 				key_play => ir_up,
 				key_ff => ir_right,
 				key_stop => ir_down,
-				key_vol_up => ir_plus,
-				key_vol_dn => ir_minus,
+				key_vol_up => ir_y,
+				key_vol_dn => ir_n,
 
 				joystick_a => ir_joystick1(5 downto 0),
 				joystick_b => ir_joystick2(5 downto 0)
@@ -522,14 +523,14 @@ begin
 			ir_joystick1(6) <= '1';
 			ir_joystick2(6) <= '1';
 
-			ir_keys <= (not ir_runstop) & "111111" & (not (ir_up or ir_down)) &
+			ir_keys <= (not ir_runstop) & "11" & (not ir_n) & "111" & (not (ir_up or ir_down)) &
 					"1111111" & (not (ir_f5 or ir_f6)) &
 					"1111111" & (not (ir_f3 or ir_f4)) &
 					(not ir_space) & (not (ir_left or ir_up or ir_f2 or ir_f4 or ir_f6 or ir_f8)) & "11111" & (not (ir_f1 or ir_f2)) &
-					"11" & (not ir_minus) & "1111" & (not (ir_f7 or ir_f8)) &
+					"1111111" & (not (ir_f7 or ir_f8)) &
 					"1111111" & (not (ir_left or ir_right)) &
-					"1111111" & (not ir_enter) &
-					"11" & (not ir_plus) & "11111";
+					(not ir_arrowleft) & "111" & (not ir_y) & "11" & (not ir_enter) &
+					"11111111";
 	end generate;
 
 	noCdtvRemote : if not enable_cdtv_remote generate
@@ -561,17 +562,12 @@ begin
 				d => c64_data_reg,
 				q => c64_kb_q,
 
-				joystick1 => c64_joystick1(5 downto 0),
-				joystick2 => c64_joystick2(5 downto 0),
-				joystick3 => c64_joystick3(5 downto 0),
-				joystick4 => c64_joystick4(5 downto 0),
+				joystick1 => c64_joystick1,
+				joystick2 => c64_joystick2,
+				joystick3 => c64_joystick3,
+				joystick4 => c64_joystick4,
 				keys => c64_keys
 			);
-
-		c64_joystick1(6) <= '1';
-		c64_joystick2(6) <= '1';
-		c64_joystick3(6) <= '1';
-		c64_joystick4(6) <= '1';
 
 		c64_addr <= c64_kb_a;
 		c64_to_io <= c64_kb_q;
@@ -916,6 +912,7 @@ begin
 					end if;
 				when MUX_WAIT1 =>
 					-- Continue BUSVIC output at end of phi2=0, so we sample BA a few times.
+					-- A15..12 driven, A11..0 not driven, Data driven, no write.
 					mux_d_reg <= "0101";
 					if docking_station_loc = '1' then
 						mux_d_reg <= "1111";
@@ -944,6 +941,7 @@ begin
 					mux_d_reg <= X"C";
 					mux_reg <= X"5";
 				when MUX_BUSVIC =>
+					-- A15..12 driven, A11..0 not driven, Data driven, no write.
 					mux_d_reg <= "0101";
 					if docking_station_loc = '1' then
 						mux_d_reg <= "1111";
@@ -959,7 +957,8 @@ begin
 					mux_d_reg <= c64_to_io(7 downto 4);
 					mux_reg <= X"1";
 				when MUX_END0 =>
-					mux_d_reg <= "0111";
+					-- A15..12 driven, A11..0 not driven, Data driven, no write.
+					mux_d_reg <= "0101";
 					if docking_station_loc = '1' then
 						mux_d_reg <= "1111";
 					end if;
