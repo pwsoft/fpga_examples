@@ -190,7 +190,7 @@ end entity;
 -- -----------------------------------------------------------------------
 
 architecture rtl of chameleon_v5_hwtest_top is
-	constant version_str : string := "20190510";
+	constant version_str : string := "20190514";
 
 	type state_t is (TEST_IDLE, TEST_FILL, TEST_FILL_W, TEST_CHECK, TEST_CHECK_W, TEST_ERROR);
 
@@ -201,6 +201,7 @@ architecture rtl of chameleon_v5_hwtest_top is
 	signal clk_locked : std_logic;
 	signal ena_1mhz : std_logic;
 	signal ena_1khz : std_logic;
+	signal ena_1sec : std_logic;
 	signal no_clock : std_logic;
 
 	signal reset_button_n : std_logic;
@@ -292,6 +293,45 @@ architecture rtl of chameleon_v5_hwtest_top is
 	signal docking_amiga_reset_n : std_logic;
 	signal docking_amiga_scancode : unsigned(7 downto 0);
 
+-- MIDI
+	signal midi_txd : std_logic;
+	signal midi_rxd : std_logic;
+	signal midi_data : unsigned(63 downto 0);
+
+	procedure drawunsigned(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; t : unsigned) is
+		variable index : integer;
+		variable nibble : unsigned(3 downto 0);
+		variable pixels : unsigned(0 to 63);
+	begin
+		if (x >= xpos) and ((x - xpos) < 2*t'length)
+		and (y >= ypos) and ((y - ypos) < 8) then
+			pixels := (others => '0');
+			index := (t'length/4-1) - to_integer(x-xpos) / 8;
+			nibble := t(index*4+3 downto index*4);
+			case nibble is
+			when X"0" => pixels := X"1C22222A22221C00";
+			when X"1" => pixels := X"0818080808081C00";
+			when X"2" => pixels := X"1C22020408103E00";
+			when X"3" => pixels := X"1C22020C02221C00";
+			when X"4" => pixels := X"0C14243E04040E00";
+			when X"5" => pixels := X"3E20203C02221C00";
+			when X"6" => pixels := X"1C20203C22221C00";
+			when X"7" => pixels := X"3E02040810101000";
+			when X"8" => pixels := X"1C22221C22221C00";
+			when X"9" => pixels := X"1C22221E02021C00";
+			when X"A" => pixels := X"1C22223E22222200";
+			when X"B" => pixels := X"3C22223C22223C00";
+			when X"C" => pixels := X"1C22202020221C00";
+			when X"D" => pixels := X"3C22222222223C00";
+			when X"E" => pixels := X"3E20203C20203E00";
+			when X"F" => pixels := X"3E20203C20202000";
+			when others =>
+				null;
+			end case;
+			video <= pixels(to_integer(y - ypos) * 8 + (to_integer(x - xpos) mod 8));
+		end if;
+	end procedure;
+
 	procedure drawtext(signal video : inout std_logic; x : signed; y : signed; xpos : integer; ypos : integer; t : string) is
 		variable ch : character;
 		variable pixels : unsigned(0 to 63);
@@ -373,23 +413,6 @@ begin
 	sd_clk <= sd_clk_loc;
 
 -- -----------------------------------------------------------------------
--- Phi 2
--- -----------------------------------------------------------------------
-	myPhi2: entity work.chameleon_phi_clock
-		port map (
-			clk => sysclk,
-			phi2_n => phi2_n,
-
-			-- no_clock is high when there are no phiIn changes detected.
-			-- This signal allows switching between real I/O and internal emulation.
-			no_clock => no_clock,
-
-			-- docking_station is high when there are no phiIn changes (no_clock) and
-			-- the phi signal is low. Without docking station phi is pulled up.
-			docking_station => docking_station
-		);
-
--- -----------------------------------------------------------------------
 -- Reset
 -- -----------------------------------------------------------------------
 	myReset : entity work.gen_reset
@@ -424,6 +447,12 @@ begin
 			ena_1khz => ena_1khz
 		);
 
+	ena1sec_inst : entity work.chameleon_1khz
+		port map (
+			clk => sysclk,
+			ena_1mhz => ena_1khz,
+			ena_1khz => ena_1sec
+		);
 
 -- -----------------------------------------------------------------------
 -- SDRAM Controller
@@ -596,113 +625,95 @@ begin
 	end process;
 
 -- -----------------------------------------------------------------------
--- Docking station
+-- Chameleon IO entity
 -- -----------------------------------------------------------------------
-	myDockingStation : entity work.chameleon_docking_station
+	chameleon_io_inst : entity work.chameleon_io
+		generic map (
+			enable_docking_station => true,
+			enable_docking_irq => true,
+			enable_vga_id_read => true,
+			enable_cdtv_remote => false,
+			enable_c64_joykeyb => true,
+			enable_c64_4player => true,
+			enable_raw_spi => false,
+			enable_iec_access => true
+		)
 		port map (
+		-- Clocks
 			clk => sysclk,
+			clk_mux => sysclk,
+			ena_1mhz => ena_1mhz,
+			reset => reset,
+			reset_ext => open,
 
+		-- Config
+			no_clock => no_clock,
 			docking_station => docking_station,
 			docking_version => docking_version,
+			vga_id => vga_id,
 
+		-- Chameleon FPGA pins
+			-- C64 Clocks
+			phi2_n => phi2_n,
 			dotclock_n => dotclock_n,
+			-- C64 cartridge control lines
 			io_ef_n => ioef_n,
 			rom_lh_n => romlh_n,
-			irq_q => docking_irq,
+			-- SPI bus
+			spi_miso => spi_miso,
+			-- CPLD multiplexer
+			mux_clk => mux_clk,
+			mux => mux,
+			mux_d => mux_d,
+			mux_q => mux_q,
 
+		-- LEDs
+			led_green => led_green,
+			led_red => led_red,
+			ir => ir,
+
+		-- PS/2 Keyboard
+			ps2_keyboard_clk_out => ps2_keyboard_clk_out,
+			ps2_keyboard_dat_out => ps2_keyboard_dat_out,
+			ps2_keyboard_clk_in => ps2_keyboard_clk_in,
+			ps2_keyboard_dat_in => ps2_keyboard_dat_in,
+
+		-- PS/2 Mouse
+			ps2_mouse_clk_out => ps2_mouse_clk_out,
+			ps2_mouse_dat_out => ps2_mouse_dat_out,
+			ps2_mouse_clk_in => ps2_mouse_clk_in,
+			ps2_mouse_dat_in => ps2_mouse_dat_in,
+
+		-- Buttons
+			button_reset_n => reset_button_n,
+
+		-- Joysticks
 			joystick1 => joystick1,
 			joystick2 => joystick2,
 			joystick3 => joystick3,
 			joystick4 => joystick4,
+
+		-- Keyboards
 			keys => docking_keys,
 			restore_key_n => docking_restore_n,
-
-			amiga_power_led => led_green,
-			amiga_drive_led => led_red,
 			amiga_reset_n => docking_amiga_reset_n,
-			amiga_scancode => docking_amiga_scancode
+			amiga_trigger => open,
+			amiga_scancode => docking_amiga_scancode,
+
+		-- IEC bus
+			iec_dat_out => iec_reg(0),
+			iec_clk_out => iec_reg(1),
+			iec_srq_out => iec_reg(2),
+			iec_atn_out => iec_reg(3),
+			iec_clk_in => open,
+			iec_dat_in => open,
+			iec_atn_in => open,
+			iec_srq_in => open,
+
+		-- MIDI (only available on Docking-station V2)
+			midi_txd => midi_txd,
+			midi_rxd => midi_rxd
 		);
-
--- -----------------------------------------------------------------------
--- MUX CPLD
--- -----------------------------------------------------------------------
-	-- MUX clock
-	process(sysclk)
-	begin
-		if rising_edge(sysclk) then
-			mux_clk_reg <= not mux_clk_reg;
-		end if;
-	end process;
-
-	-- MUX read
-	process(sysclk)
-	begin
-		if rising_edge(sysclk) then
-			if mux_clk_reg = '1' then
-				case mux_reg is
-				when X"6" =>
-					irq_n <= mux_q(2);
-				when X"B" =>
-					reset_button_n <= mux_q(1);
-					ir <= mux_q(3);
-				when X"A" =>
-					vga_id <= mux_q;
-				when X"E" =>
-					ps2_keyboard_dat_in <= mux_q(0);
-					ps2_keyboard_clk_in <= mux_q(1);
-					ps2_mouse_dat_in <= mux_q(2);
-					ps2_mouse_clk_in <= mux_q(3);
-				when others =>
-					null;
-				end case;
-			end if;
-		end if;
-	end process;
-
-	-- MUX write
-	process(sysclk)
-	begin
-		if rising_edge(sysclk) then
-			if mux_clk_reg = '1' then
-				case mux_reg is
-				when X"7" =>
-					mux_d_reg <= "1111";
-					if docking_station = '1' then
-						mux_d_reg <= "1" & docking_irq & "11";
-					end if;
-					mux_reg <= X"6";
-				when X"6" =>
-					mux_d_reg <= "1111";
-					mux_reg <= X"8";
-				when X"8" =>
-					mux_d_reg <= "1111";
-					mux_reg <= X"A";
-				when X"A" =>
-					mux_d_reg <= "10" & led_green & led_red;
-					mux_reg <= X"B";
-				when X"B" =>
-					mux_d_reg <= iec_reg;
-					mux_reg <= X"D";
-				when X"D" =>
-					mux_d_reg(0) <= ps2_keyboard_dat_out;
-					mux_d_reg(1) <= ps2_keyboard_clk_out;
-					mux_d_reg(2) <= ps2_mouse_dat_out;
-					mux_d_reg(3) <= ps2_mouse_clk_out;
-					mux_reg <= X"E";
-				when X"E" =>
-					mux_d_reg <= "1111";
-					mux_reg <= X"7";
-				when others =>
-					mux_reg <= X"B";
-					mux_d_reg <= "10" & led_green & led_red;
-				end case;
-			end if;
-		end if;
-	end process;
-
-	mux_clk <= mux_clk_reg;
-	mux_d <= mux_d_reg;
-	mux <= mux_reg;
 
 -- -----------------------------------------------------------------------
 -- LEDs
@@ -858,11 +869,67 @@ begin
 	end process;
 
 -- -----------------------------------------------------------------------
+-- Midi ports on Docking-station V2
+-- -----------------------------------------------------------------------
+	midi_blk : block
+		signal empty : std_logic;
+
+		signal uart_d : unsigned(7 downto 0) := (others => '0');
+		signal uart_d_trig : std_logic;
+		signal uart_q : unsigned(7 downto 0);
+		signal uart_q_trig : std_logic;
+		signal midi_data_reg : unsigned(63 downto 0) := (others => '0');
+	begin
+		midi_data <= midi_data_reg;
+
+		uart_inst : entity work.gen_uart
+			generic map (
+				bits => 8,
+				baud => 31250,
+				ticksPerUsec => 100
+			)
+			port map (
+				clk => sysclk,
+
+				d => uart_d,
+				d_trigger => uart_d_trig,
+				d_empty => empty,
+
+				q => uart_q,
+				q_trigger => uart_q_trig,
+
+				serial_rxd => midi_rxd,
+				serial_txd => midi_txd
+			);
+
+		process(sysclk)
+		begin
+			if rising_edge(sysclk) then
+				if uart_q_trig = '1' then
+					midi_data_reg <= midi_data_reg(55 downto 0) & uart_q;
+				end if;
+			end if;
+		end process;
+
+		process(sysclk)
+		begin
+			if rising_edge(sysclk) then
+				uart_d_trig <= '0';
+				if ena_1sec = '1' then
+					uart_d <= uart_d + 1;
+					uart_d_trig <= '1';
+				end if;
+			end if;
+		end process;
+	end block;
+
+-- -----------------------------------------------------------------------
 -- VGA colors
 -- -----------------------------------------------------------------------
 	vga_colors_blk : block
 		signal vid_joystick_results : std_logic;
 		signal vid_keyboard_results : std_logic;
+		signal vid_midi_results : std_logic;
 		signal vid_mode : std_logic;
 		signal vid_version : std_logic;
 	begin
@@ -902,6 +969,21 @@ begin
 					end loop;
 				end loop;
 				box(vid_keyboard_results, x, y, 144 + 9*16, 352, docking_restore_n);
+			end if;
+		end process;
+
+		process(sysclk) is
+			variable x : signed(11 downto 0);
+			variable y : signed(11 downto 0);
+		begin
+			x := signed(currentX);
+			y := signed(currentY);
+			if rising_edge(sysclk) then
+				vid_midi_results <= '0';
+				if docking_version = '1' then
+					drawtext(vid_midi_results, x, y, 320, 400, "MIDI:");
+					drawunsigned(vid_midi_results, x, y, 320, 408, midi_data);
+				end if;
 			end if;
 		end process;
 
@@ -1099,17 +1181,14 @@ begin
 						end loop;
 					end loop;
 
-					if docking_station = '1' then
-						if vid_joystick_results = '1'
-						or vid_keyboard_results = '1'
-						or video_amiga = '1' then
-							red <= (others => '1');
-							grn <= (others => '1');
-							blu <= (others => '1');
-						end if;
-					end if;
-
-					if (vid_mode or vid_version) = '1' then
+				--
+				-- Draw test results
+					if (vid_joystick_results
+					or vid_keyboard_results
+					or vid_midi_results
+					or video_amiga
+					or vid_mode
+					or vid_version) = '1' then
 						red <= (others => '1');
 						grn <= (others => '1');
 						blu <= (others => '1');

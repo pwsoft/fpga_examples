@@ -40,6 +40,9 @@
 --
 -- -----------------------------------------------------------------------
 -- enable_docking_station - Enable support for the docking-station.
+-- enable_docking_irq     - Drive IRQ line for docking-station communication to control LED on Amiga keyboard.
+-- enable_vga_id_read     - Enable reading of the VGA id lines (scl,id2,sca,id1) for debugging purposes.
+--                          Best to keep this disabled unless VGA id status is needed as it uses CPLD multiplexer time.
 -- enable_cdtv_remove     - Enable support for the cdtv remote. CDTV will be mapped to first
 --                          two joysticks and the "keys" array when set to true. Otherwise
 --                          the raw ir signal is also available for external decoding.
@@ -65,6 +68,9 @@
 --                   '1' when docking-station is connected.
 -- docking_version - '0' first version, supports 2 fire buttons on each port
 --                   '1' second version, 3 fire buttons on each port and midi in/out
+-- vga_id          - State of the VGA identifier pins. bit3=scl, bit2=id2, bit1=sca, bit0=id1
+--                   Only gets updated if enable_vga_id_read flag is true.
+--                   Only enable this feature if the state of these lines is really needed in the design.
 --
 -- to_usb_rx
 --
@@ -125,6 +131,9 @@
 --                   On a C64 the restore key is wired to the NMI line instead.
 --
 -- iec_*           - IEC signals. Only valid when enable_iec_access is set to true.
+--
+-- midi_txd        - Midi transmit data ('1' at rest, '0' drives output)
+-- midi_rxd        - Midi receive data ('1' at rest, '0' when current flows through opto)
 -- -----------------------------------------------------------------------
 
 library IEEE;
@@ -136,6 +145,8 @@ use IEEE.numeric_std.all;
 entity chameleon_io is
 	generic (
 		enable_docking_station : boolean := true;
+		enable_docking_irq : boolean := false;
+		enable_vga_id_read : boolean := false;
 		enable_cdtv_remote : boolean := false;
 		enable_c64_joykeyb : boolean := false;
 		enable_c64_4player : boolean := false;
@@ -154,6 +165,7 @@ entity chameleon_io is
 		no_clock : out std_logic;
 		docking_station : out std_logic;
 		docking_version : out std_logic;
+		vga_id : out unsigned(3 downto 0);
 
 -- Chameleon FPGA pins
 		-- C64 Clocks
@@ -260,7 +272,11 @@ entity chameleon_io is
 		iec_clk_in : out std_logic;
 		iec_dat_in : out std_logic;
 		iec_atn_in : out std_logic;
-		iec_srq_in : out std_logic
+		iec_srq_in : out std_logic;
+
+-- MIDI (only available on Docking-station V2)
+		midi_txd : in std_logic := '1';
+		midi_rxd : out std_logic
 	);
 end entity;
 -- -----------------------------------------------------------------------
@@ -273,6 +289,7 @@ architecture rtl of chameleon_io is
 	signal end_of_phi_1 : std_logic;
 
 -- State
+	signal vga_id_reg : unsigned(3 downto 0) := (others => '0');
 	signal reset_pending : std_logic := '0';
 	signal reset_in : std_logic := '0';
 
@@ -393,11 +410,17 @@ architecture rtl of chameleon_io is
 	signal iec_dat_reg : std_logic := '1';
 	signal iec_atn_reg : std_logic := '1';
 	signal iec_srq_reg : std_logic := '1';
+
+-- MIDI
+	signal midi_txd_reg : std_logic := '1';
+	signal midi_rxd_reg : std_logic := '1';
 begin
 	reset_ext <= reset_in;
 	no_clock <= no_clock_loc;
 	docking_station <= docking_station_loc;
 	docking_version <= docking_version_loc;
+	vga_id <= vga_id_reg;
+	--
 	button_reset_n <= button_reset_n_reg;
 	--
 	phi_out <= phi;
@@ -418,6 +441,8 @@ begin
 	joystick3 <= docking_joystick3 and (c64_joystick3);
 	joystick4 <= docking_joystick4 and (c64_joystick4);
 	keys <= docking_keys and c64_keys and ir_keys;
+	--
+	midi_rxd <= midi_rxd_reg;
 
 -- -----------------------------------------------------------------------
 -- PHI2 clock sync
@@ -726,9 +751,15 @@ begin
 					end if;
 				when X"7" =>
 					c64_ba_reg <= mux_q(1);
+					midi_rxd_reg <= '1';
 					if no_clock_loc = '1' then
 						c64_ba_reg <= '1';
+						if (docking_station_loc = '1') and (docking_version_loc = '1') then
+							midi_rxd_reg <= mux_q(1);
+						end if;
 					end if;
+				when X"A" =>
+					vga_id_reg <= mux_q;
 				when X"B" =>
 					button_reset_n_reg <= mux_q(1);
 					ir_reg <= mux_q(3);
@@ -763,6 +794,8 @@ begin
 	process(clk_mux)
 	begin
 		if rising_edge(clk_mux) then
+			midi_txd_reg <= midi_txd;
+
 			if mux_clk_reg = '1' then
 				spi_sample <= '0';
 				case mux_state is
@@ -866,9 +899,9 @@ begin
 				when MUX_NMIIRQ1 | MUX_NMIIRQ2=>
 					mux_d_reg <= "110" & (not reset);
 					mux_reg <= X"6";
---					if docking_station_loc = '1' then
---						mux_d_reg(2) <= docking_irq;
---					end if;
+					if enable_docking_irq and (docking_station_loc = '1') then
+						mux_d_reg(2) <= docking_irq;
+					end if;
 --
 -- IEC
 				when MUX_IEC1 | MUX_IEC2 | MUX_IEC3 | MUX_IEC4 =>
@@ -877,6 +910,9 @@ begin
 					mux_d_reg(2) <= iec_srq_out;
 					mux_d_reg(3) <= iec_atn_out;
 					mux_reg <= X"D";
+					if enable_vga_id_read and (mux_state = MUX_IEC4) then
+						mux_reg <= X"A";
+					end if;
 --
 -- USART, LEDs and IR
 				when MUX_LED =>
@@ -949,6 +985,10 @@ begin
 					mux_reg <= X"7";
 				when MUX_ULTIMAX =>
 					mux_d_reg <= "1011";
+					if (no_clock_loc = '1') and (docking_station_loc = '1') and (docking_version_loc = '1') then
+						-- MIDI output on Docking-station V2
+						mux_d_reg(2) <= midi_txd_reg;
+					end if;
 					mux_reg <= X"8";
 				when MUX_D0VIC =>
 					mux_d_reg <= c64_to_io(3 downto 0);
@@ -996,6 +1036,10 @@ begin
 							-- Clockport write
 							mux_d_reg <= "1001";
 						end if;
+					end if;
+					if (no_clock_loc = '1') and (docking_station_loc = '1') and (docking_version_loc = '1') then
+						-- MIDI output on Docking-station V2
+						mux_d_reg(2) <= midi_txd_reg;
 					end if;
 					mux_reg <= X"8";
 				when MUX_A3 =>

@@ -108,7 +108,7 @@ use work.video_pkg.all;
 -- -----------------------------------------------------------------------
 
 architecture rtl of chameleon2 is
-	constant version_str : string := "20190510";
+	constant version_str : string := "20190514";
 	constant reset_cycles : integer := 131071;
 	constant enable_phi2_waveform : boolean := false;
 

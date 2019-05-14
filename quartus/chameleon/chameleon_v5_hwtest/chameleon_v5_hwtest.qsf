@@ -268,8 +268,12 @@ set_global_assignment -name VHDL_FILE ../../../rtl/chameleon/chameleon_docking_s
 set_global_assignment -name VHDL_FILE ../../../rtl/chameleon/chameleon_led.vhd
 set_global_assignment -name VHDL_FILE ../../../rtl/chameleon/chameleon_1khz.vhd
 set_global_assignment -name VHDL_FILE ../../../rtl/chameleon/chameleon_old_sdram.vhd
+set_global_assignment -name VHDL_FILE ../../../rtl/chameleon/chameleon_io.vhd
+set_global_assignment -name VHDL_FILE ../../../rtl/chameleon/chameleon_cdtv_remote.vhd
+set_global_assignment -name VHDL_FILE ../../../rtl/chameleon/chameleon_c64_joykeyb.vhd
 set_global_assignment -name VHDL_FILE ../../../rtl/general/fractal_noise.vhd
 set_global_assignment -name VHDL_FILE ../../../rtl/general/gen_reset.vhd
+set_global_assignment -name VHDL_FILE ../../../rtl/general/gen_uart.vhd
 set_global_assignment -name VHDL_FILE ../../../rtl/ps2/io_ps2_mouse.vhd
 set_global_assignment -name VHDL_FILE ../../../rtl/ps2/io_ps2_com.vhd
 set_global_assignment -name VHDL_FILE ../../../rtl/ps2/io_ps2_keyboard.vhd
