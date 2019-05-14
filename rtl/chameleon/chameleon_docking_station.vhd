@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2012 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2019 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -235,6 +235,8 @@ begin
 				key_reg <= (others => '1');
 				restore_n_reg <= '1';
 				amiga_reset_n_reg <= '1';
+				amiga_scancode_reg <= (others => '1');
+				amiga_trigger_reg <= '0';
 			end if;
 		end if;
 	end process;
