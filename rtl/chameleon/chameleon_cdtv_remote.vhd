@@ -5,7 +5,7 @@
 -- Multi purpose FPGA expansion for the Commodore 64 computer
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2017 by Peter Wendrich (pwsoft@syntiac.com)
+-- Copyright 2005-2019 by Peter Wendrich (pwsoft@syntiac.com)
 -- http://www.syntiac.com/chameleon.html
 --
 -- This source file is free software: you can redistribute it and/or modify
@@ -71,7 +71,7 @@ entity chameleon_cdtv_remote is
 		clk : in std_logic;
 		ena_1mhz : in std_logic;
 		ir : in std_logic := '1';
-		
+
 		trigger : out std_logic;
 
 		key_1 : out std_logic;
@@ -97,7 +97,7 @@ entity chameleon_cdtv_remote is
 		key_vol_dn : out std_logic;
 		joystick_a : out unsigned(5 downto 0);
 		joystick_b : out unsigned(5 downto 0);
-		
+
 		debug_code : out unsigned(11 downto 0)
 	);
 end entity;
@@ -116,7 +116,8 @@ architecture rtl of chameleon_cdtv_remote is
 		STATE_HIGH          -- receive ir signal is high
 		);
 	signal state : state_t := STATE_IDLE;
-	
+
+	signal ir_sync_reg : std_logic := '1';
 	signal ir_reg : std_logic := '1';
 	signal pre_trigger : std_logic := '0'; -- trigger out 1 clock later to sync with decoding logic
 	signal timer : integer range 0 to long_timeout := 0;
@@ -130,7 +131,14 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			ir_reg <= ir;
+			ir_sync_reg <= ir;
+			ir_reg <= ir_sync_reg;
+		end if;
+	end process;
+
+	process(clk)
+	begin
+		if rising_edge(clk) then
 			pre_trigger <= '0';
 		-- State machine
 			case state is
@@ -238,7 +246,7 @@ begin
 			key_vol_dn <= '0';
 			joystick_a <= (others => '1');
 			joystick_b <= (others => '1');
-			
+
 			case current_code(5 downto 0) is
 			when "000001" => key_1 <= '1';
 			when "100001" => key_2 <= '1';
@@ -264,13 +272,13 @@ begin
 			when others =>
 				null;
 			end case;
-			
+
 			if (current_code(11) = '0') and (current_code(1 downto 0) = "00") then
 				joystick_a <= not (current_code(6) & current_code(7) & current_code(2) & current_code(3) & current_code(4) & current_code(5));
 			end if;
 			if (current_code(11) = '1') and (current_code(1 downto 0) = "00") then
 				joystick_b <= not (current_code(6) & current_code(7) & current_code(2) & current_code(3) & current_code(4) & current_code(5));
 			end if;
-		end if;	
+		end if;
 	end process;
 end architecture;
