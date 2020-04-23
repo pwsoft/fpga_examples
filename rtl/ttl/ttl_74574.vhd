@@ -62,8 +62,7 @@ entity ttl_74574 is
 end entity;
 
 architecture rtl of ttl_74574 is
-	signal cp : std_logic;
-	signal cp_dly : std_logic;
+	signal cp_ena : std_logic;
 	signal p12_loc : ttl_t;
 	signal p13_loc : ttl_t;
 	signal p14_loc : ttl_t;
@@ -74,6 +73,9 @@ architecture rtl of ttl_74574 is
 	signal p19_loc : ttl_t;
 	signal register_reg : unsigned(7 downto 0) := (others => '0');
 begin
+	edge_inst : entity work.ttl_edge
+		port map (emuclk => emuclk, edge => '1', d => p1, ena => cp_ena);
+
 	p12_latency_inst : entity work.ttl_latency
 		generic map (latency => latency)
 		port map (clk => emuclk, d => p12_loc, q => p12);
@@ -108,12 +110,10 @@ begin
 	p18_loc <= FLOAT when is_high(p1) else std2ttl(register_reg(1));
 	p19_loc <= FLOAT when is_high(p1) else std2ttl(register_reg(0));
 
-	cp <= ttl2std(p1);
 	process(emuclk)
 	begin
 		if rising_edge(emuclk) then
-			cp_dly <= cp;
-			if (cp = '1') and (cp_dly = '0') then
+			if cp_ena = '1' then
 				register_reg(0) <= ttl2std(p2);
 				register_reg(1) <= ttl2std(p3);
 				register_reg(2) <= ttl2std(p4);
