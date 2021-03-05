@@ -112,6 +112,11 @@ begin
 			p7 => std2ttl(cnt_reg(3)), p6 => ZERO, p15 => std2ttl(cnt_reg(9)), p9 => std2ttl(cnt_reg(10)), p1 => ONE,
 			p2 => ZERO, p3 => ONE, p4 => ONE, p5 => ZERO, p10 => ZERO, p11 => ONE, P12 => ZERO, p14 => ONE);
 
+	ttl_74283_inst : entity work.ttl_74283
+		port map (emuclk => clk,
+			p5 => std2ttl(cnt_reg(3)), p3 => std2ttl(cnt_reg(4)), p14 => std2ttl(cnt_reg(5)), p12 => std2ttl(cnt_reg(6)), 
+			p6 => std2ttl(cnt_reg(7)), p2 => std2ttl(cnt_reg(8)), p15 => std2ttl(cnt_reg(9)), p11 => std2ttl(cnt_reg(10)), 
+			p7 => std2ttl(cnt_reg(11)));
 
 	t_or <= a or b;
 	t_xor <= a xor b;
