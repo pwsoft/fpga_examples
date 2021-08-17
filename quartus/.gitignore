@@ -1,5 +1,6 @@
 db/
 incremental_db/
+*_files/
 PLLJ_PLLSPE_INFO.txt
 *.done
 *.jdi
