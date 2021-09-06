@@ -111,6 +111,9 @@ architecture rtl of chameleon2 is
 	signal docking_keys : unsigned(63 downto 0);
 	signal docking_restore_n : std_logic;
 
+-- Audio output (sigma delta)
+	signal audio : std_logic;
+
 -- Video pipeline
 	signal end_of_line : std_logic;
 	signal end_of_frame : std_logic;
@@ -138,8 +141,8 @@ begin
 	iec_srq_out <= '0';
 	irq_out <= '0';
 	nmi_out <= '0';
-	sigma_l <= '0';
-	sigma_r <= '0';
+	sigma_l <= audio;
+	sigma_r <= audio;
 	rtc_cs <= '0';
 	mmc_cs <= '1';
 
@@ -246,6 +249,9 @@ begin
 			-- LEDs
 				led_green => led_green,
 				led_red => led_red,
+
+			-- Audio
+				audio => audio,
 
 			-- Video
 				red => red,

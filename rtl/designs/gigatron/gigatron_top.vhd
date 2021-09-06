@@ -73,6 +73,9 @@ entity gigatron_top is
 		led_green : out std_logic;
 		led_red : out std_logic;
 
+	-- Audio
+		audio : out std_logic;
+
 	-- Video
 		red : out unsigned(4 downto 0);
 		grn : out unsigned(4 downto 0);
@@ -223,6 +226,31 @@ begin
 	end block;
 
 -- -----------------------------------------------------------------------
+-- Audio
+-- -----------------------------------------------------------------------
+	audio_blk : block
+		signal audio_unsigned : unsigned(5 downto 0);
+		signal audio_signed : signed(5 downto 0);
+	begin
+		-- Convert from unsigned to signed (by reversing highest bit)
+		-- Also /4 to reduce amplitude of output to resonable line levels.
+		audio_unsigned <=
+			(not xoutport(7)) & (not xoutport(7)) & (not xoutport(7)) &
+			xoutport(6 downto 4);
+		audio_signed <= signed(audio_unsigned);
+
+		dac_inst : entity work.audio_sigmadelta_dac
+			generic map (
+				audioBits => 6
+			)
+			port map (
+				clk => clk,
+				d => audio_signed,
+				q => audio
+			);
+	end block;
+
+-- -----------------------------------------------------------------------
 -- Keyboard/Joystick mapping
 --
 -- PS/2 mappings are simular to pluggy-mcplugface
@@ -346,7 +374,9 @@ begin
 					when X"15" => -- Q
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"11";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"71";
 							else
 								ascii_reg <= X"51";
@@ -364,7 +394,9 @@ begin
 					when X"1A" => -- Z
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"1A";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"7A";
 							else
 								ascii_reg <= X"5A";
@@ -373,7 +405,9 @@ begin
 					when X"1B" => -- S
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"13";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"73";
 							else
 								ascii_reg <= X"53";
@@ -382,7 +416,9 @@ begin
 					when X"1C" => -- A
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"01";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"61";
 							else
 								ascii_reg <= X"41";
@@ -391,7 +427,9 @@ begin
 					when X"1D" => -- W
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"17";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"77";
 							else
 								ascii_reg <= X"57";
@@ -420,7 +458,9 @@ begin
 					when X"22" => -- X
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"18";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"78";
 							else
 								ascii_reg <= X"58";
@@ -429,7 +469,9 @@ begin
 					when X"23" => -- D
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"04";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"64";
 							else
 								ascii_reg <= X"44";
@@ -438,7 +480,9 @@ begin
 					when X"24" => -- E
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"05";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"65";
 							else
 								ascii_reg <= X"45";
@@ -470,7 +514,9 @@ begin
 					when X"2A" => -- V
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"16";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"76";
 							else
 								ascii_reg <= X"56";
@@ -479,7 +525,9 @@ begin
 					when X"2B" => -- F
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"06";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"66";
 							else
 								ascii_reg <= X"46";
@@ -488,7 +536,9 @@ begin
 					when X"2C" => -- T
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"14";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"74";
 							else
 								ascii_reg <= X"54";
@@ -497,7 +547,9 @@ begin
 					when X"2D" => -- R
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"12";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"72";
 							else
 								ascii_reg <= X"52";
@@ -515,7 +567,9 @@ begin
 					when X"31" => -- N
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"0E";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"6E";
 							else
 								ascii_reg <= X"4E";
@@ -524,7 +578,9 @@ begin
 					when X"32" => -- B
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"02";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"62";
 							else
 								ascii_reg <= X"42";
@@ -533,7 +589,9 @@ begin
 					when X"33" => -- H
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"08";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"68";
 							else
 								ascii_reg <= X"48";
@@ -542,7 +600,9 @@ begin
 					when X"34" => -- G
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"07";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"67";
 							else
 								ascii_reg <= X"47";
@@ -551,7 +611,9 @@ begin
 					when X"35" => -- Y
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"19";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"79";
 							else
 								ascii_reg <= X"59";
@@ -569,7 +631,9 @@ begin
 					when X"3A" => -- M
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"0D";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"6D";
 							else
 								ascii_reg <= X"4D";
@@ -578,7 +642,9 @@ begin
 					when X"3B" => -- J
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"0A";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"6A";
 							else
 								ascii_reg <= X"4A";
@@ -587,7 +653,9 @@ begin
 					when X"3C" => -- U
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"15";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"75";
 							else
 								ascii_reg <= X"55";
@@ -623,7 +691,9 @@ begin
 					when X"42" => -- K
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"0B";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"6B";
 							else
 								ascii_reg <= X"4B";
@@ -632,7 +702,9 @@ begin
 					when X"43" => -- I
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"09";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"69";
 							else
 								ascii_reg <= X"49";
@@ -641,7 +713,9 @@ begin
 					when X"44" => -- O
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"0F";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"6F";
 							else
 								ascii_reg <= X"4F";
@@ -686,7 +760,9 @@ begin
 					when X"4B" => -- L
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"0C";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"6C";
 							else
 								ascii_reg <= X"4C";
@@ -704,7 +780,9 @@ begin
 					when X"4D" => -- P
 						if release_flag = '0' then
 							ascii_frame_reg <= ascii_frame_init;
-							if (keys.shift_l or keys.shift_r) = '0' then
+							if keys.ctrl = '1' then
+								ascii_reg <= X"10";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
 								ascii_reg <= X"70";
 							else
 								ascii_reg <= X"50";
