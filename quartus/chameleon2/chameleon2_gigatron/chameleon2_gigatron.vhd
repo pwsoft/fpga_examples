@@ -217,7 +217,6 @@ begin
 				reset => reset,
 
 				flashslot => flashslot,
-				joystick => docking_joystick1,
 
 			-- SPI interface
 				spi_cs_n => flash_cs,
@@ -235,6 +234,18 @@ begin
 				ram_cas => ram_cas,
 				ram_ldqm => ram_ldqm,
 				ram_udqm => ram_udqm,
+
+			-- Keyboard and joystick
+				ps2_keyboard_clk_in => ps2_keyboard_clk_in,
+				ps2_keyboard_dat_in => ps2_keyboard_dat_in,
+				ps2_keyboard_clk_out => ps2_keyboard_clk_out,
+				ps2_keyboard_dat_out => ps2_keyboard_dat_out,
+
+				joystick => docking_joystick1,
+
+			-- LEDs
+				led_green => led_green,
+				led_red => led_red,
 
 			-- Video
 				red => red,

@@ -50,7 +50,8 @@ entity gigatron_logic is
 		sram_q : in unsigned(7 downto 0);
 
 		inport : in unsigned(7 downto 0);
-		outport : out unsigned(7 downto 0)
+		outport : out unsigned(7 downto 0);
+		xoutport : out unsigned(7 downto 0)
 	);
 end entity;
 
@@ -70,6 +71,7 @@ architecture rtl of gigatron_logic is
 	signal x_reg : unsigned(7 downto 0) := (others => '0');
 	signal y_reg : unsigned(7 downto 0) := (others => '0');
 	signal out_reg : unsigned(7 downto 0) := (others => '0');
+	signal xout_reg : unsigned(7 downto 0) := (others => '0');
 
 	signal b_bus_reg : unsigned(7 downto 0) := (others => '0');
 	signal alu_reg : unsigned(7 downto 0) := (others => '0');
@@ -82,6 +84,7 @@ begin
 	sram_a <= sram_a_reg;
 	sram_d <= sram_d_reg;
 	outport <= out_reg;
+	xoutport <= xout_reg;
 
 	process(clk)
 	begin
@@ -122,10 +125,18 @@ begin
 					when "110" =>
 						if ir_reg(7 downto 5) /= "110" then
 							out_reg <= alu_reg;
+							if (out_reg(6) = '0') and (alu_reg(6) = '1') then
+								-- Rising edge on hsync, latch xout from accumulator
+								xout_reg <= accu_reg;
+							end if;
 						end if;
 					when "111" =>
 						if ir_reg(7 downto 5) /= "110" then
 							out_reg <= alu_reg;
+							if (out_reg(6) = '0') and (alu_reg(6) = '1') then
+								-- Rising edge on hsync, latch xout from accumulator
+								xout_reg <= accu_reg;
+							end if;
 						end if;
 						x_reg <= x_reg + 1;
 					when others =>

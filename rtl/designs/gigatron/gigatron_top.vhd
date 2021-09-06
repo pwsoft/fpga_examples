@@ -44,7 +44,6 @@ entity gigatron_top is
 		reset : in std_logic;
 
 		flashslot : in unsigned(4 downto 0);
-		joystick : in unsigned(6 downto 0);
 
 	-- SPI interface
 		spi_cs_n : out std_logic;
@@ -62,6 +61,17 @@ entity gigatron_top is
 		ram_cas : out std_logic;
 		ram_ldqm : out std_logic;
 		ram_udqm : out std_logic;
+
+	-- Keyboard and joystick
+		ps2_keyboard_clk_in : in std_logic;
+		ps2_keyboard_dat_in : in std_logic;
+		ps2_keyboard_clk_out : out std_logic;
+		ps2_keyboard_dat_out : out std_logic;
+		joystick : in unsigned(6 downto 0);
+
+	-- LEDs
+		led_green : out std_logic;
+		led_red : out std_logic;
 
 	-- Video
 		red : out unsigned(4 downto 0);
@@ -95,6 +105,7 @@ architecture rtl of gigatron_top is
 
 	signal inport : unsigned(7 downto 0);
 	signal outport : unsigned(7 downto 0);
+	signal xoutport : unsigned(7 downto 0);
 
 	signal tick : std_logic;
 begin
@@ -206,14 +217,624 @@ begin
 				sram_q => sram_q,
 
 				inport => inport,
-				outport => outport
+				outport => outport,
+				xoutport => xoutport
 			);
 	end block;
 
 -- -----------------------------------------------------------------------
--- Joystick mapping
+-- Keyboard/Joystick mapping
+--
+-- PS/2 mappings are simular to pluggy-mcplugface
+--
+-- Cursor -> joystick up/down/left/right
+-- Page up -> start
+-- Page down -> select
+-- end / delete / backspace -> button A
+-- home / insert -> button B
+--
+-- Many others generate ASCII codes that are held for 3 frames.
+-- For this vsync (outport bit 7) pluses are counted.
 -- -----------------------------------------------------------------------
-	inport <= joystick(4) & joystick(5) & "11" & joystick(0) & joystick(1) & joystick(2) & joystick(3);
+	keyboard_blk : block
+		constant ascii_frame_init : unsigned(1 downto 0) := "11";
+
+		signal trigger : std_logic;
+		signal scancode : unsigned(7 downto 0);
+		signal inport_reg : unsigned(7 downto 0) := (others => '1');
+		signal outport_dly : unsigned(7 downto 0) := (others => '0');
+
+		signal ascii_reg : unsigned(7 downto 0) := (others => '0');
+		signal ascii_frame_reg : unsigned(1 downto 0) := (others => '0');
+
+		signal release_flag : std_logic := '0';
+		signal extended_flag : std_logic := '0';
+		signal pause_flag : std_logic := '0';
+
+		type keys_t is record
+				-- Modifiers
+				shift_l : std_logic;
+				shift_r : std_logic;
+				ctrl : std_logic;
+
+				curs_u : std_logic;
+				curs_d : std_logic;
+				curs_l : std_logic;
+				curs_r : std_logic;
+				pageup : std_logic;
+				pagedown : std_logic;
+				-- B buttons
+				home : std_logic;
+				insert : std_logic;
+				-- A buttons
+				xend : std_logic;
+				del : std_logic;
+				backsp : std_logic;
+			end record;
+		signal keys : keys_t := (others => '0');
+
+		signal emu_joystick : unsigned(7 downto 0);
+	begin
+		inport <= inport_reg;
+
+		-- First blinken-light mapped to green
+		led_green <= xoutport(0);
+		-- The last blinken-light mapped to red (others on PS/2 keyboard).
+		-- Kinda the best we can do with the limited LEDs available.
+		led_red <= xoutport(3);
+
+		ps2_keyboard_inst : entity work.io_ps2_keyboard
+			generic map (
+				ticksPerUsec => clk_ticks_per_usec
+			)
+			port map (
+				clk => clk,
+				reset => reset,
+
+				ps2_clk_in => ps2_keyboard_clk_in,
+				ps2_dat_in => ps2_keyboard_dat_in,
+				ps2_clk_out => ps2_keyboard_clk_out,
+				ps2_dat_out => ps2_keyboard_dat_out,
+
+				-- Map first three of the four blinken-lights to the keyboard.
+				-- Fourth is mapped to the red led on the housing.
+				-- Kinda the best we can do with the limited LEDs available.
+				-- Also on my keyboards order is numlk, capslk, scrolllk, but that might differ distroying the "walking" effect.
+				num_lock => xoutport(0),
+				caps_lock => xoutport(1),
+				scroll_lock => xoutport(2),
+
+				trigger => trigger,
+				scancode => scancode
+			);
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				outport_dly <= outport;
+				if ascii_frame_reg /= 0 then
+					if (outport(7) = '1') and (outport_dly(7) = '0') then
+						ascii_frame_reg <= ascii_frame_reg - 1;
+					end if;
+				end if;
+
+				if trigger = '1' then
+					-- Handle control
+					case scancode is
+					when X"E0" =>
+						extended_flag <= '1';
+					when X"F0" =>
+						release_flag <= '1';
+					when others =>
+						extended_flag <= '0';
+						release_flag <= '0';
+					end case;
+
+					-- Process keys
+					case scancode is
+					when X"0E" => -- ` ~
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"60";
+							else
+								ascii_reg <= X"7E";
+							end if;
+						end if;
+					when X"12" => if extended_flag = '0' then keys.shift_l <= not release_flag; end if;
+					when X"14" => keys.ctrl <= not release_flag;
+					when X"15" => -- Q
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"71";
+							else
+								ascii_reg <= X"51";
+							end if;
+						end if;
+					when X"16" => -- 1
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"31";
+							else
+								ascii_reg <= X"21";
+							end if;
+						end if;
+					when X"1A" => -- Z
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"7A";
+							else
+								ascii_reg <= X"5A";
+							end if;
+						end if;
+					when X"1B" => -- S
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"73";
+							else
+								ascii_reg <= X"53";
+							end if;
+						end if;
+					when X"1C" => -- A
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"61";
+							else
+								ascii_reg <= X"41";
+							end if;
+						end if;
+					when X"1D" => -- W
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"77";
+							else
+								ascii_reg <= X"57";
+							end if;
+						end if;
+					when X"1E" => -- 2
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"32";
+							else
+								ascii_reg <= X"40";
+							end if;
+						end if;
+					when X"21" => -- C
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if keys.ctrl = '1' then
+								ascii_reg <= X"03";
+							elsif (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"63";
+							else
+								ascii_reg <= X"43";
+							end if;
+						end if;
+					when X"22" => -- X
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"78";
+							else
+								ascii_reg <= X"58";
+							end if;
+						end if;
+					when X"23" => -- D
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"64";
+							else
+								ascii_reg <= X"44";
+							end if;
+						end if;
+					when X"24" => -- E
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"65";
+							else
+								ascii_reg <= X"45";
+							end if;
+						end if;
+					when X"25" => -- 4
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"34";
+							else
+								ascii_reg <= X"24";
+							end if;
+						end if;
+					when X"26" => -- 3
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"33";
+							else
+								ascii_reg <= X"23";
+							end if;
+						end if;
+					when X"29" => -- Space
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							ascii_reg <= X"20";
+						end if;
+					when X"2A" => -- V
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"76";
+							else
+								ascii_reg <= X"56";
+							end if;
+						end if;
+					when X"2B" => -- F
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"66";
+							else
+								ascii_reg <= X"46";
+							end if;
+						end if;
+					when X"2C" => -- T
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"74";
+							else
+								ascii_reg <= X"54";
+							end if;
+						end if;
+					when X"2D" => -- R
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"72";
+							else
+								ascii_reg <= X"52";
+							end if;
+						end if;
+					when X"2E" => -- 5
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"35";
+							else
+								ascii_reg <= X"25";
+							end if;
+						end if;
+					when X"31" => -- N
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"6E";
+							else
+								ascii_reg <= X"4E";
+							end if;
+						end if;
+					when X"32" => -- B
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"62";
+							else
+								ascii_reg <= X"42";
+							end if;
+						end if;
+					when X"33" => -- H
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"68";
+							else
+								ascii_reg <= X"48";
+							end if;
+						end if;
+					when X"34" => -- G
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"67";
+							else
+								ascii_reg <= X"47";
+							end if;
+						end if;
+					when X"35" => -- Y
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"79";
+							else
+								ascii_reg <= X"59";
+							end if;
+						end if;
+					when X"36" => -- 6
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"36";
+							else
+								ascii_reg <= X"5E";
+							end if;
+						end if;
+					when X"3A" => -- M
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"6D";
+							else
+								ascii_reg <= X"4D";
+							end if;
+						end if;
+					when X"3B" => -- J
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"6A";
+							else
+								ascii_reg <= X"4A";
+							end if;
+						end if;
+					when X"3C" => -- U
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"75";
+							else
+								ascii_reg <= X"55";
+							end if;
+						end if;
+					when X"3D" => -- 7
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"37";
+							else
+								ascii_reg <= X"26";
+							end if;
+						end if;
+					when X"3E" => -- 8
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"38";
+							else
+								ascii_reg <= X"2A";
+							end if;
+						end if;
+					when X"41" => -- , <
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"2C";
+							else
+								ascii_reg <= X"3C";
+							end if;
+						end if;
+					when X"42" => -- K
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"6B";
+							else
+								ascii_reg <= X"4B";
+							end if;
+						end if;
+					when X"43" => -- I
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"69";
+							else
+								ascii_reg <= X"49";
+							end if;
+						end if;
+					when X"44" => -- O
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"6F";
+							else
+								ascii_reg <= X"4F";
+							end if;
+						end if;
+					when X"45" => -- 0
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"30";
+							else
+								ascii_reg <= X"29";
+							end if;
+						end if;
+					when X"46" => -- 9
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"39";
+							else
+								ascii_reg <= X"28";
+							end if;
+						end if;
+					when X"49" => -- . >
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"2E";
+							else
+								ascii_reg <= X"3E";
+							end if;
+						end if;
+					when X"4A" => -- / ?
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"2F";
+							else
+								ascii_reg <= X"3F";
+							end if;
+						end if;
+					when X"4B" => -- L
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"6C";
+							else
+								ascii_reg <= X"4C";
+							end if;
+						end if;
+					when X"4C" => -- : ;
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"3B";
+							else
+								ascii_reg <= X"3A";
+							end if;
+						end if;
+					when X"4D" => -- P
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"70";
+							else
+								ascii_reg <= X"50";
+							end if;
+						end if;
+					when X"4E" => -- - _
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"2D";
+							else
+								ascii_reg <= X"5F";
+							end if;
+						end if;
+					when X"52" => -- ' "
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"27";
+							else
+								ascii_reg <= X"22";
+							end if;
+						end if;
+					when X"54" => -- [ {
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"5B";
+							else
+								ascii_reg <= X"7B";
+							end if;
+						end if;
+					when X"55" => -- = +
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"3D";
+							else
+								ascii_reg <= X"2B";
+							end if;
+						end if;
+					when X"59" => if extended_flag = '0' then keys.shift_r <= not release_flag; end if;
+					when X"5A" => -- Return
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+--							ascii_reg <= X"0D";
+							ascii_reg <= X"0A";
+						end if;
+					when X"5B" => -- ] }
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"5D";
+							else
+								ascii_reg <= X"7D";
+							end if;
+						end if;
+					when X"5D" => -- \ |
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							if (keys.shift_l or keys.shift_r) = '0' then
+								ascii_reg <= X"5C";
+							else
+								ascii_reg <= X"7C";
+							end if;
+						end if;
+					when X"66" => keys.backsp <= not release_flag;
+					when X"69" => if extended_flag = '1' then keys.xend <= not release_flag; end if;
+					when X"6B" => if extended_flag = '1' then keys.curs_l <= not release_flag; end if;
+					when X"6C" => if extended_flag = '1' then keys.home <= not release_flag; end if;
+					when X"70" => if extended_flag = '1' then keys.insert <= not release_flag; end if;
+					when X"71" => if extended_flag = '1' then keys.del <= not release_flag; end if;
+					when X"72" => if extended_flag = '1' then keys.curs_d <= not release_flag; end if;
+					when X"74" => if extended_flag = '1' then keys.curs_r <= not release_flag; end if;
+					when X"75" => if extended_flag = '1' then keys.curs_u <= not release_flag; end if;
+					when X"76" => -- Escape
+						if release_flag = '0' then
+							ascii_frame_reg <= ascii_frame_init;
+							ascii_reg <= X"1B";
+						end if;
+					when X"77" => -- Numlock / end of pause key
+						if release_flag = '1' then
+							pause_flag <= '0';
+						end if;
+					when X"7A" => if extended_flag = '1' then keys.pagedown <= not release_flag; end if;
+					when X"7D" => if extended_flag = '1' then keys.pageup <= not release_flag; end if;
+					when X"E1" => -- Pause key. E1 14 77 E1 F0 14 F0 77.
+						pause_flag <= '1';
+					when others =>
+						null;
+					end case;
+				end if;
+
+				if reset = '1' then
+					extended_flag <= '0';
+					release_flag <= '0';
+					keys <= (others => '0');
+				end if;
+			end if;
+		end process;
+
+		-- Button A
+		emu_joystick(7) <= joystick(4) and (not keys.xend) and (not keys.del) and (not keys.backsp);
+		-- Button B
+		emu_joystick(6) <= joystick(5) and (not keys.home) and (not keys.insert);
+		-- Button select
+		emu_joystick(5) <= not keys.pagedown;
+		-- Button start
+		emu_joystick(4) <= not keys.pageup;
+		-- Direction Up
+		emu_joystick(3) <= joystick(0) and (not keys.curs_u);
+		-- Direction Down
+		emu_joystick(2) <= joystick(1) and (not keys.curs_d);
+		-- Direction Left
+		emu_joystick(1) <= joystick(2) and (not keys.curs_l);
+		-- Direction Right
+		emu_joystick(0) <= joystick(3) and (not keys.curs_r);
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				inport_reg <= emu_joystick;
+				-- Give joystick priority on inport, but if nothing is held down
+				-- forward ascii code for upto 3 frames.
+				if (emu_joystick = X"FF") and (ascii_frame_reg /= 0) then
+					inport_reg <= ascii_reg;
+				end if;
+			end if;
+		end process;
+	end block;
 
 -- -----------------------------------------------------------------------
 -- Video/Color encoding
