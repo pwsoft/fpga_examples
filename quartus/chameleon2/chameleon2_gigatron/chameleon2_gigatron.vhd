@@ -46,7 +46,6 @@ architecture rtl of chameleon2 is
 -- Clocks enables
 	signal ena_1mhz : std_logic;
 	signal ena_1khz : std_logic;
-	signal ena_1sec : std_logic;
 
 -- System control signals
 	signal reset : std_logic;
@@ -179,13 +178,6 @@ begin
 			clk => sysclk,
 			ena_1mhz => ena_1mhz,
 			ena_1khz => ena_1khz
-		);
-
-	ena_1sec_inst : entity work.chameleon_1khz
-		port map (
-			clk => sysclk,
-			ena_1mhz => ena_1khz,
-			ena_1khz => ena_1sec
 		);
 
 -- -----------------------------------------------------------------------

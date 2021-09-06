@@ -25,9 +25,10 @@ set_global_assignment -name SDC_FILE $ownpath/chameleon2_gigatron.sdc
 set_global_assignment -name VHDL_FILE $ownpath/pll50.vhd
 
 # Gigatron entities
-set_global_assignment -name VHDL_FILE $ownpath/gigatron_ram.vhd
-set_global_assignment -name VHDL_FILE $ownpath/gigatron_sdram_ctrl.vhd
-set_global_assignment -name VHDL_FILE $ownpath/gigatron_top.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/gigatron/gigatron_logic.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/gigatron/gigatron_ram.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/gigatron/gigatron_sdram_ctrl.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/gigatron/gigatron_top.vhd
 
 # Chameleon entities
 set_global_assignment -name VHDL_FILE $rtlpath/chameleon/chameleon_1mhz.vhd
