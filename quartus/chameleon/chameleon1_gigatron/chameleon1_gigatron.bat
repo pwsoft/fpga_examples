@@ -1,0 +1,1 @@
+c:\altera\13.1\quartus\bin64\quartus_sh.exe -t chameleon1_gigatron.tcl
