@@ -39,6 +39,9 @@ begin
 			clk => clk,
 			white_top => '0',
 
+			cursor_col => "100",
+			cursor_row => "010",
+
 			col => vid_col,
 			row => vid_row,
 			piece => vid_piece,

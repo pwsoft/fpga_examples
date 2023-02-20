@@ -15,6 +15,9 @@ entity fpgachess_video is
 		clk : in std_logic;
 		white_top : in std_logic;
 
+		cursor_col : in unsigned(2 downto 0);
+		cursor_row : in unsigned(2 downto 0);
+
 		row : out unsigned(2 downto 0);
 		col : out unsigned(2 downto 0);
 		piece : in piece_t;
@@ -34,7 +37,8 @@ architecture rtl of fpgachess_video is
 	type color_t is (
 			C_BLANK, C_BACKGROUND, C_BORDER,
 			C_CHARACTER,
-			C_BOARD_LIGHT, C_BOARD_DARK
+			C_BOARD_CURSOR, C_BOARD_LIGHT, C_BOARD_DARK,
+			C_PIECE_BLACK, C_PIECE_WHITE
 		);
 	signal current_color : color_t;
 
@@ -49,8 +53,12 @@ architecture rtl of fpgachess_video is
 			y : unsigned(11 downto 0);
 
 			board : std_logic;
+			-- Selects the chess cell currently rendered, only valid if "board" is set
 			board_col : unsigned(2 downto 0);
 			board_row : unsigned(2 downto 0);
+			-- Coordinates within a chess cell, only valid if "board" is set
+			board_colx : unsigned(5 downto 0);
+			board_rowy : unsigned(5 downto 0);
 		end record;
 	signal vga_master : vid_stage_t;
 	signal vga_coords : vid_stage_t;
@@ -59,6 +67,7 @@ architecture rtl of fpgachess_video is
 	signal vga_color : vid_stage_t;
 	signal current_char : unsigned(7 downto 0);
 	signal current_pixels : unsigned(7 downto 0);
+	signal piece_pixels : unsigned(47 downto 0);
 begin
 -- -----------------------------------------------------------------------
 -- Video timing 640x480
@@ -95,6 +104,8 @@ begin
 	vga_master.board <= '0';
 	vga_master.board_col <= "000";
 	vga_master.board_row <= "000";
+	vga_master.board_colx <= (others => '0');
+	vga_master.board_rowy <= (others => '0');
 
 -- -----------------------------------------------------------------------
 -- Coordinates
@@ -152,6 +163,8 @@ begin
 				vga_coords_reg.board <= board_xrun_reg and board_yrun_reg;
 				vga_coords_reg.board_col <= board_col_reg;
 				vga_coords_reg.board_row <= board_row_reg;
+				vga_coords_reg.board_colx <= board_xcnt_reg;
+				vga_coords_reg.board_rowy <= board_ycnt_reg;
 			end if;
 		end process;
 	end block;
@@ -172,24 +185,24 @@ begin
 				current_char_reg <= X"20";
 				--current_char_reg <= vga_coords.x(8 downto 4) & vga_coords.y(6 downto 4);
 
-				if vga_coords.board = '1' then
-					case piece is
-					when piece_white & piece_pawn => current_char_reg <= X"50";   -- P
-					when piece_white & piece_bishop => current_char_reg <= X"42"; -- B
-					when piece_white & piece_knight => current_char_reg <= X"4E"; -- N
-					when piece_white & piece_rook => current_char_reg <= X"52"; -- R
-					when piece_white & piece_queen => current_char_reg <= X"51"; -- Q
-					when piece_white & piece_king => current_char_reg <= X"4B"; -- K
-					when piece_black & piece_pawn => current_char_reg <= X"70";
-					when piece_black & piece_bishop => current_char_reg <= X"62";
-					when piece_black & piece_knight => current_char_reg <= X"6E";
-					when piece_black & piece_rook => current_char_reg <= X"72"; -- R
-					when piece_black & piece_queen => current_char_reg <= X"71"; -- Q
-					when piece_black & piece_king => current_char_reg <= X"6B"; -- K
-					when others =>
-						null;
-					end case;
-				end if;
+--				if vga_coords.board = '1' then
+--					case piece is
+--					when piece_white & piece_pawn => current_char_reg <= X"50";   -- P
+--					when piece_white & piece_bishop => current_char_reg <= X"42"; -- B
+--					when piece_white & piece_knight => current_char_reg <= X"4E"; -- N
+--					when piece_white & piece_rook => current_char_reg <= X"52"; -- R
+--					when piece_white & piece_queen => current_char_reg <= X"51"; -- Q
+--					when piece_white & piece_king => current_char_reg <= X"4B"; -- K
+--					when piece_black & piece_pawn => current_char_reg <= X"70";
+--					when piece_black & piece_bishop => current_char_reg <= X"62";
+--					when piece_black & piece_knight => current_char_reg <= X"6E";
+--					when piece_black & piece_rook => current_char_reg <= X"72"; -- R
+--					when piece_black & piece_queen => current_char_reg <= X"71"; -- Q
+--					when piece_black & piece_king => current_char_reg <= X"6B"; -- K
+--					when others =>
+--						null;
+--					end case;
+--				end if;
 
 				case vga_coords.y(8 downto 4) is
 				when "00010" =>
@@ -255,14 +268,15 @@ begin
 					end case;
 				when "11101" =>
 					case vga_coords.x(9 downto 4) is
-					when "100100" =>
-						current_char_reg <= X"46"; -- F
-					when "100101" =>
-						current_char_reg <= X"50"; -- P
-					when "100110" =>
-						current_char_reg <= X"47"; -- G
-					when "100111" =>
-						current_char_reg <= X"41"; -- A
+					when "011111" => current_char_reg <= X"46"; -- F
+					when "100000" => current_char_reg <= X"50"; -- P
+					when "100001" => current_char_reg <= X"47"; -- G
+					when "100010" => current_char_reg <= X"41"; -- A
+					when "100011" => current_char_reg <= X"43"; -- C
+					when "100100" => current_char_reg <= X"48"; -- H
+					when "100101" => current_char_reg <= X"45"; -- E
+					when "100110" => current_char_reg <= X"53"; -- S
+					when "100111" => current_char_reg <= X"53"; -- S
 					when others =>
 						null;
 					end case;
@@ -422,6 +436,131 @@ begin
 		end process;
 	end block;
 
+	piece_blk : block
+		signal piece_pixels_reg : unsigned(piece_pixels'range) := (others => '0');
+	begin
+		piece_pixels <= piece_pixels_reg;
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				piece_pixels_reg <= (others => '0');
+
+				case piece(2 downto 0) is
+				when piece_pawn =>
+					case vga_matrix.board_rowy is     --  0       1       2       3       4       5       X
+					when "001000" => piece_pixels_reg <= "000000000000000000000111111000000000000000000000";
+					when "001001" => piece_pixels_reg <= "000000000000000000011111111110000000000000000000";
+					when "001010" => piece_pixels_reg <= "000000000000000000111111111111000000000000000000";
+					when "001011" => piece_pixels_reg <= "000000000000000001111111111111100000000000000000";
+					when "001100" => piece_pixels_reg <= "000000000000000011111111111111110000000000000000";
+					when "001101" => piece_pixels_reg <= "000000000000000011111111111111110000000000000000";
+					when "001110" => piece_pixels_reg <= "000000000000000001111111111111100000000000000000";
+					when "001111" => piece_pixels_reg <= "000000000000000000111111111111000000000000000000";
+					when "010000" => piece_pixels_reg <= "000000000000000000011111111110000000000000000000";
+					when "010001" => piece_pixels_reg <= "000000000000000000000111111000000000000000000000";
+					when "010010" => piece_pixels_reg <= "000000000000000000111111111111000000000000000000";
+					when "010011" => piece_pixels_reg <= "000000000000000011111111111111110000000000000000";
+					when "010100" => piece_pixels_reg <= "000000000000001111111111111111111100000000000000";
+					when "010101" => piece_pixels_reg <= "000000000000000000001111111100000000000000000000";
+					when "010110" => piece_pixels_reg <= "000000000000000000001111111100000000000000000000";
+					when "010111" => piece_pixels_reg <= "000000000000000000011111111110000000000000000000";
+					when "011000" => piece_pixels_reg <= "000000000000000000011111111110000000000000000000";
+					when "011001" => piece_pixels_reg <= "000000000000000000111111111111000000000000000000";
+					when "011010" => piece_pixels_reg <= "000000000000000000111111111111000000000000000000";
+					when "011011" => piece_pixels_reg <= "000000000000000001111111111111100000000000000000";
+					when "011100" => piece_pixels_reg <= "000000000000000011111111111111110000000000000000";
+					when "011101" => piece_pixels_reg <= "000000000000000111111111111111111000000000000000";
+					when "011110" => piece_pixels_reg <= "000000000000001111111111111111111100000000000000";
+					when "011111" => piece_pixels_reg <= "000000000000011111111111111111111110000000000000";
+					when "100000" => piece_pixels_reg <= "000000000000111111111111111111111111000000000000";
+					when "100001" => piece_pixels_reg <= "000000000001111111111111111111111111100000000000";
+					when others =>
+						null;
+					end case;
+				when piece_knight =>
+					case vga_matrix.board_rowy is     --  0       1       2       3       4       5       X
+					when "001000" => piece_pixels_reg <= "000000000000000000000000000000000000000000000011";
+					when "001001" => piece_pixels_reg <= "000000000000000000000000000000000000000000000000";
+					when "001010" => piece_pixels_reg <= "000000000000000000000000000000000000000000000000";
+					when "001011" => piece_pixels_reg <= "000000000000000000011111111000000000000000000000";
+					when "001100" => piece_pixels_reg <= "000000000000000000101111111100000000000000000000";
+					when "001101" => piece_pixels_reg <= "000000000000000001001111111110000000000000000000";
+					when "001110" => piece_pixels_reg <= "000000000000000010001111111111000000000000000000";
+					when "001111" => piece_pixels_reg <= "000000000000000111111111111111100000000000000000";
+					when "010000" => piece_pixels_reg <= "000000000000001111111111111111110000000000000000";
+					when "010001" => piece_pixels_reg <= "000000000000111111111111111111110000000000000000";
+					when "010010" => piece_pixels_reg <= "000000000001111111111111111111111000000000000000";
+					when "010011" => piece_pixels_reg <= "000000000011111111111111111111111000000000000000";
+					when "010100" => piece_pixels_reg <= "000000000011111111111111111111111100000000000000";
+					when "010101" => piece_pixels_reg <= "000000000011111111111111111111111100000000000000";
+					when "010110" => piece_pixels_reg <= "000000000011111111111111111111111110000000000000";
+					when "010111" => piece_pixels_reg <= "000000000011111110000001111111111110000000000000";
+					when "011000" => piece_pixels_reg <= "000000000011111100000001111111111111000000000000";
+					when "011001" => piece_pixels_reg <= "000000000011110000000011111111111111000000000000";
+					when "011010" => piece_pixels_reg <= "000000000011110000011111111111111111000000000000";
+					when "011011" => piece_pixels_reg <= "000000000011110001111111111111111111100000000000";
+					when "011100" => piece_pixels_reg <= "000000000000000111111111111111111111100000000000";
+					when "011101" => piece_pixels_reg <= "000000000000011111111111111111111111100000000000";
+					when "011110" => piece_pixels_reg <= "000000000000111111111111111111111111110000000000";
+					when "011111" => piece_pixels_reg <= "000000000001111111111111111111111111110000000000";
+					when "100000" => piece_pixels_reg <= "000000000011111111111111111111111111110000000000";
+					when "100001" => piece_pixels_reg <= "000000000011111111111111111111111111110000000000";
+					when others =>
+						null;
+					end case;
+				when piece_rook =>
+					case vga_matrix.board_rowy is     --  0       1       2       3       4       5       X
+					when "001000" => piece_pixels_reg <= "000000001111110000111100001111000011111100000000";
+					when "001001" => piece_pixels_reg <= "000000001111110000111100001111000011111100000000";
+					when "001010" => piece_pixels_reg <= "000000001111110000111100001111000011111100000000";
+					when "001011" => piece_pixels_reg <= "000000001111110000111100001111000011111100000000";
+					when "001100" => piece_pixels_reg <= "000000001111110000111100001111000011111100000000";
+					when "001101" => piece_pixels_reg <= "000000000111111111111111111111111111111000000000";
+					when "001110" => piece_pixels_reg <= "000000000011111111111111111111111111110000000000";
+					when "001111" => piece_pixels_reg <= "000000000011100111111111111111111001110000000000";
+					when "010000" => piece_pixels_reg <= "000000000011100111111111111111111001110000000000";
+					when "010001" => piece_pixels_reg <= "000000000011100111111100111111111001110000000000";
+					when "010010" => piece_pixels_reg <= "000000000011100111111100111111111001110000000000";
+					when "010011" => piece_pixels_reg <= "000000000011111111111100111111111111110000000000";
+					when "010100" => piece_pixels_reg <= "000000000011111111111100111111111111110000000000";
+					when "010101" => piece_pixels_reg <= "000000000011111111111111111111001111110000000000";
+					when "010110" => piece_pixels_reg <= "000000000011111111111111111111001111110000000000";
+					when "010111" => piece_pixels_reg <= "000000000011111111111111111111001111110000000000";
+					when "011000" => piece_pixels_reg <= "000000000011111111111111111111001111110000000000";
+					when "011001" => piece_pixels_reg <= "000000000011111111111111111111111111110000000000";
+					when "011010" => piece_pixels_reg <= "000000000011111110011111111111111111110000000000";
+					when "011011" => piece_pixels_reg <= "000000000011111110011111111111111111110000000000";
+					when "011100" => piece_pixels_reg <= "000000000011111110011111110001111111110000000000";
+					when "011101" => piece_pixels_reg <= "000000000011111110011111100000111111110000000000";
+					when "011110" => piece_pixels_reg <= "000000000011111111111111100000111111110000000000";
+					when "011111" => piece_pixels_reg <= "000000000011111111111111100000111111110000000000";
+					when "100000" => piece_pixels_reg <= "000000000011111111111111100000111111110000000000";
+					when "100001" => piece_pixels_reg <= "000000000011111111111111100000111111110000000000";
+					when others =>
+						null;
+					end case;
+				when others =>
+					null;
+				end case;
+
+				if piece(2 downto 0) /= piece_none then
+					case vga_matrix.board_rowy is     --  0       1       2       3       4       5       X
+					when "100010" => piece_pixels_reg <= "000000000011111111111111111111111111110000000000";
+					when "100011" => piece_pixels_reg <= "000000000011000000000000000000000000110000000000";
+					when "100100" => piece_pixels_reg <= "000000000111111111111111111111111111111000000000";
+					when "100101" => piece_pixels_reg <= "000000000111111111111111111111111111111000000000";
+					when "100110" => piece_pixels_reg <= "000000001111111111111111111111111111111100000000";
+					when "100111" => piece_pixels_reg <= "000000001111111111111111111111111111111100000000";
+					when others =>
+						null;
+					end case;
+				end if;
+			end if;
+		end process;
+
+	end block;
+
 -- -----------------------------------------------------------------------
 -- Combining, mixing and color selection
 -- -----------------------------------------------------------------------
@@ -443,6 +582,19 @@ begin
 					color_reg <= C_BOARD_LIGHT;
 					if (vga_character.board_col(0) xor vga_character.board_row(0)) = '1' then
 						color_reg <= C_BOARD_DARK;
+					end if;
+					if (cursor_row = vga_character.board_row) and (cursor_col = vga_character.board_col) then
+						if (vga_character.board_colx = 0) or (vga_character.board_colx = 1) or (vga_character.board_colx = 46) or (vga_character.board_colx = 47)
+						or (vga_character.board_rowy = 0) or (vga_character.board_rowy = 1) or (vga_character.board_rowy = 46) or (vga_character.board_rowy = 47) then
+							color_reg <= C_BOARD_CURSOR;
+						end if;
+					end if;
+
+					if piece_pixels(to_integer(47-vga_character.board_colx)) = '1' then
+						color_reg <= C_PIECE_BLACK;
+						if piece(3) = piece_white then
+							color_reg <= C_PIECE_WHITE;
+						end if;
 					end if;
 				end if;
 				if current_pixels(to_integer(7-vga_character.x(3 downto 1))) = '1' then
@@ -500,10 +652,21 @@ begin
 						red_reg <= (others => '0');
 						grn_reg <= (others => '1');
 						blu_reg <= (others => '1');
+					when C_BOARD_CURSOR =>
+						red_reg <= X"FF";
+						grn_reg <= X"FF";
 					when C_BOARD_LIGHT =>
 						grn_reg <= X"60";
 					when C_BOARD_DARK =>
 						grn_reg <= X"40";
+					when C_PIECE_BLACK =>
+						red_reg <= (others => '0');
+						grn_reg <= (others => '0');
+						blu_reg <= (others => '0');
+					when C_PIECE_WHITE =>
+						red_reg <= (others => '1');
+						grn_reg <= (others => '1');
+						blu_reg <= (others => '1');
 					end case;
 				end if;
 			end if;
