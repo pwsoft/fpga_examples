@@ -2,18 +2,23 @@ fpga_examples
 =============
 
 Example code in vhdl to help starting new projects using FPGA devices.
+Most of the examples are designed to run on the "Turbo Chameleon 64" cartridge either V1 or V2 hardware (often project files are available for both).
+That said, many of the entities are hardware agnostic and can be used as building blocks for designs on other platforms as well.
 
 What is here
 ============
 
 Quartus II projects files for the Turbo Chameleon 64 hardware V1. These are located in the quartus/chameleon folder.
-* chameleon_example_io. An example demonstrating how to access I/O ports on the Chameleon hardware.
-* chameleon_life. Conways game of life implementation for Chameleon. It requires a PS/2 mouse.
-* chameleon_v5_hwtest. Chameleon hardware selftest for hardware production and diagnostics.
+* chameleon_example_io, An example demonstrating how to access I/O ports on the Chameleon hardware.
+* chameleon_gigatron, Project files for the emulator of the Gigatron TTL computer.
+* chameleon_life, Conways game of life implementation for Chameleon. It requires a PS/2 mouse.
+* chameleon_v5_hwtest, Chameleon hardware selftest for V1 hardware for production QA and fault diagnostics during repairs.
 
 Quartus II projects files for the Turbo Chameleon 64 hardware V2. These are located in the quartus/chameleon2 folder.
-* chameleon2_hwtest. Chameleon hardware selftest for hardware production and diagnostics.
-* chameleon2_life. Conways game of life implementation for Chameleon. It requires a PS/2 mouse.
+* chameleon2_fpgachess, Project files for FPGA-Chess
+* chameleon2_gigatron, Project files for the emulator of the Gigatron TTL computer.
+* chameleon2_hwtest, Chameleon hardware selftest for V2 hardware for production QA and fault diagnostics during repairs.
+* chameleon2_life, Conways game of life implementation for Chameleon. It requires a PS/2 mouse.
 
 Various vhdl files to be reused in other designs.
 * rtl/audio. Support files for processing audio.
@@ -36,6 +41,9 @@ Various vhdl files to be reused in other designs.
 	* chameleon2_io_ps2iec, Read PS/2 and IEC data from the input multiplexer
 	* chameleon2_io_shiftreg, Statemachine to control the output shiftregister for reset lines, PS/2 and LEDs.
 	* chameleon2_spi, Chameleon SPI controller for communicating with flash and sdcard on V2 hardware.
+* rtl/designs, Directory containing code for complete example systems.
+    * rtl/designs/gigatron, Emulator of the Gigatron TTL computer for Chameleon 64 hardware (both versions, hw specific files located in quartus directory).
+	* rtl/designs/fpgachess, Work in progress of an implementation of a chess engine running on a FPGA.
 * rtl/general. Varios support and example files.
     * gen_bin2gray.vhd, Binary to gray-code converter.
     * gen_button.vhd, Button debouncer
@@ -50,10 +58,10 @@ Various vhdl files to be reused in other designs.
     * gen_reset.vhd, Power-on reset circuit with manual reset button input.
     * gen_uart.vhd, Simple fixed baudrate asynchronous serial receiver/transmitter
     * gen_usart.vhd, Synchronous serial receiver/transmitter
-* rtl/ps2. Design files to add support for PS/2 keyboards and PS/2 mice.
+* rtl/ps2. Files to add support for PS/2 keyboards and PS/2 mice.
     * io_ps2_com.vhd, Lowlevel PS/2 driver. Allowes receiving and sending bytes to PS/2 devices.
-    * io_ps2_keyboard.vhd, PS/2 keyboard interface (uses io_ps2_com). Receives scancodes and can control the LEDs.
-    * io_ps2_mouse.vhd, PS/2 mouse interface (uses io_ps2_com). Gets position and button information from PS/2 mice.
+    * io_ps2_keyboard.vhd, PS/2 keyboard interface (uses io_ps2_com driver). Receives scancodes and can control the LEDs.
+    * io_ps2_mouse.vhd, PS/2 mouse interface (uses io_ps2_com driver). Gets position and button information from PS/2 mice.
 * rtl/ttl. Files for emulating standard logic chips like SN74xx and CD40xx series in realtime on FPGAs.
     * ttl_74??.vhd, VHDL implementation of various standard logic chips from the 74HCT series.
     * ttl_latency, Lowlevel building block to emulate propagation delays in chips (as an bonus also pipelines designs for easier mapping).
