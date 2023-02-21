@@ -1,3 +1,34 @@
+-- -----------------------------------------------------------------------
+--
+-- FPGA-Chess
+--
+-- Chess game engine for programmable logic devices
+--
+-- -----------------------------------------------------------------------
+-- Copyright 2022-2023 by Peter Wendrich (pwsoft@syntiac.com)
+-- http://www.syntiac.com
+--
+-- This source file is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Lesser General Public License as published
+-- by the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This source file is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program. If not, see <http://www.gnu.org/licenses/>.
+--
+-- -----------------------------------------------------------------------
+--
+-- Part of FPGA-Chess
+-- Video generation circuitry. Generates VGA signal and draws game board
+-- with pieces, movable cursor and renders text characters for the menus.
+--
+-- -----------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -198,28 +229,22 @@ begin
 			if rising_edge(clk) then
 				vga_matrix_reg <= vga_coords;
 				current_char_reg <= X"20";
-				--current_char_reg <= vga_coords.x(8 downto 4) & vga_coords.y(6 downto 4);
-
---				if vga_coords.board = '1' then
---					case piece is
---					when piece_white & piece_pawn => current_char_reg <= X"50";   -- P
---					when piece_white & piece_bishop => current_char_reg <= X"42"; -- B
---					when piece_white & piece_knight => current_char_reg <= X"4E"; -- N
---					when piece_white & piece_rook => current_char_reg <= X"52"; -- R
---					when piece_white & piece_queen => current_char_reg <= X"51"; -- Q
---					when piece_white & piece_king => current_char_reg <= X"4B"; -- K
---					when piece_black & piece_pawn => current_char_reg <= X"70";
---					when piece_black & piece_bishop => current_char_reg <= X"62";
---					when piece_black & piece_knight => current_char_reg <= X"6E";
---					when piece_black & piece_rook => current_char_reg <= X"72"; -- R
---					when piece_black & piece_queen => current_char_reg <= X"71"; -- Q
---					when piece_black & piece_king => current_char_reg <= X"6B"; -- K
---					when others =>
---						null;
---					end case;
---				end if;
 
 				case vga_coords.y(8 downto 4) is
+				when "00000" =>
+					case vga_coords.x(9 downto 4) is
+					when "000001" => current_char_reg <= X"46"; -- F
+					when "000010" => current_char_reg <= X"50"; -- P
+					when "000011" => current_char_reg <= X"47"; -- G
+					when "000100" => current_char_reg <= X"41"; -- A
+					when "000101" => current_char_reg <= X"43"; -- C
+					when "000110" => current_char_reg <= X"48"; -- H
+					when "000111" => current_char_reg <= X"45"; -- E
+					when "001000" => current_char_reg <= X"53"; -- S
+					when "001001" => current_char_reg <= X"53"; -- S
+					when others =>
+						null;
+					end case;
 				when "00010" =>
 					case vga_coords.x(9 downto 4) is
 					when "000000" => current_char_reg <= X"38";
@@ -278,20 +303,6 @@ begin
 					when "010001" => current_char_reg <= X"66";
 					when "010100" => current_char_reg <= X"67";
 					when "010111" => current_char_reg <= X"68";
-					when others =>
-						null;
-					end case;
-				when "11101" =>
-					case vga_coords.x(9 downto 4) is
-					when "011111" => current_char_reg <= X"46"; -- F
-					when "100000" => current_char_reg <= X"50"; -- P
-					when "100001" => current_char_reg <= X"47"; -- G
-					when "100010" => current_char_reg <= X"41"; -- A
-					when "100011" => current_char_reg <= X"43"; -- C
-					when "100100" => current_char_reg <= X"48"; -- H
-					when "100101" => current_char_reg <= X"45"; -- E
-					when "100110" => current_char_reg <= X"53"; -- S
-					when "100111" => current_char_reg <= X"53"; -- S
 					when others =>
 						null;
 					end case;
