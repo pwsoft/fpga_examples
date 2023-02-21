@@ -179,10 +179,18 @@ begin
 		signal fc_blu : unsigned(7 downto 0);
 		signal fc_hsync : std_logic;
 		signal fc_vsync : std_logic;
+		signal joystick_active_high : unsigned(4 downto 0);
 	begin
 		fpgachess_inst : entity work.fpgachess_top
 			port map (
 				clk => sysclk,
+				ena_1khz => ena_1khz,
+
+				cursor_up => joystick_active_high(0),
+				cursor_down => joystick_active_high(1),
+				cursor_left => joystick_active_high(2),
+				cursor_right => joystick_active_high(3),
+				cursor_enter => joystick_active_high(4),
 
 				red => fc_red,
 				grn => fc_grn,
@@ -191,6 +199,7 @@ begin
 				vsync => fc_vsync
 			);
 
+		joystick_active_high <= not docking_joystick1(4 downto 0);
 		red <= fc_red(7 downto 3);
 		grn <= fc_grn(7 downto 3);
 		blu <= fc_blu(7 downto 3);

@@ -25,7 +25,10 @@ set_global_assignment -name SDC_FILE $rtlpath/designs/fpgachess/chameleon2_fpgac
 set_global_assignment -name VHDL_FILE $ownpath/pll50/pll50.vhd
 
 # FPGACHESS specific enties
+set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_board.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_pkg.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_top.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_ui.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_video.vhd
 
 # Chameleon entities
