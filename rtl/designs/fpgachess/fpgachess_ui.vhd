@@ -17,6 +17,7 @@ entity fpgachess_ui is
 		cursor_right : in std_logic;
 		cursor_enter : in std_logic;
 
+		white_top : out std_logic;
 		cursor_row : out unsigned(2 downto 0);
 		cursor_col : out unsigned(3 downto 0)
 	);
@@ -108,9 +109,11 @@ begin
 	menu_blk : block
 		signal cursor_row_reg : unsigned(2 downto 0) := (others => '0');
 		signal cursor_col_reg : unsigned(3 downto 0) := (others => '0');
+		signal white_top_reg : std_logic := '0';
 	begin
 		cursor_row <= cursor_row_reg;
 		cursor_col <= cursor_col_reg;
+		white_top <= white_top_reg;
 
 		process(clk)
 		begin
@@ -126,6 +129,14 @@ begin
 				end if;
 				if (cursor_right_trig = '1') and (cursor_col_reg /= 8) then
 					cursor_col_reg <= cursor_col_reg + 1;
+				end if;
+				if (cursor_enter_trig = '1') then
+					case cursor_row_reg & cursor_col_reg is
+					when "1111000" => -- Board flip
+						white_top_reg <= not white_top_reg;
+					when others =>
+						null;
+					end case;
 				end if;
 			end if;
 		end process;

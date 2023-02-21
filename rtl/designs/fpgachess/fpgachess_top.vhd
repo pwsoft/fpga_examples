@@ -42,6 +42,7 @@ entity fpgachess_top is
 	port (
 		clk : in std_logic;
 		ena_1khz : in std_logic;
+		ena_1sec : in std_logic;
 
 		cursor_up : in std_logic;
 		cursor_down : in std_logic;
@@ -60,6 +61,7 @@ end entity;
 -- -----------------------------------------------------------------------
 
 architecture rtl of fpgachess_top is
+	signal white_top : std_logic;
 	signal cursor_row : unsigned(2 downto 0);
 	signal cursor_col : unsigned(3 downto 0);
 	signal vid_row : unsigned(2 downto 0);
@@ -86,6 +88,7 @@ begin
 			cursor_right => cursor_right,
 			cursor_enter => cursor_enter,
 
+			white_top => white_top,
 			cursor_row => cursor_row,
 			cursor_col => cursor_col
 		);
@@ -93,7 +96,9 @@ begin
 	video_inst : entity work.fpgachess_video
 		port map (
 			clk => clk,
-			white_top => '0',
+			ena_1sec => ena_1sec,
+
+			white_top => white_top,
 
 			cursor_row => cursor_row,
 			cursor_col => cursor_col,

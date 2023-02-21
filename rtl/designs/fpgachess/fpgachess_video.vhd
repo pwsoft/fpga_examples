@@ -44,6 +44,8 @@ entity fpgachess_video is
 	);
 	port (
 		clk : in std_logic;
+		ena_1sec : in std_logic;
+
 		white_top : in std_logic;
 
 		cursor_row : in unsigned(2 downto 0);
@@ -82,6 +84,11 @@ architecture rtl of fpgachess_video is
 			vsync : std_logic;
 			x : unsigned(11 downto 0);
 			y : unsigned(11 downto 0);
+
+			-- Character double width (40 vs 80 columns)
+			char_dw : std_logic;
+			-- Character double height (30 vs 60 lines)
+			char_dh : std_logic;
 
 			board : std_logic;
 			cursor : std_logic;
@@ -135,6 +142,8 @@ begin
 		);
 
 	-- Initialize video pipeline with sane defaults
+	vga_master.char_dw <= '0';
+	vga_master.char_dh <= '0';
 	vga_master.board <= '0';
 	vga_master.cursor <= '0';
 	vga_master.board_col <= (others => '0');
@@ -156,8 +165,8 @@ begin
 		signal board_row_reg : unsigned(2 downto 0) := (others => '0');
 	begin
 		vga_coords <= vga_coords_reg;
-		col <= board_col_reg(col'range);
-		row <= not board_row_reg;
+		col <= board_col_reg(col'range) xor (white_top & white_top & white_top);
+		row <= (not board_row_reg) xor (white_top & white_top & white_top);
 
 		process(clk)
 		begin
@@ -228,81 +237,146 @@ begin
 		begin
 			if rising_edge(clk) then
 				vga_matrix_reg <= vga_coords;
+				vga_matrix_reg.char_dh <= '1';
 				current_char_reg <= X"20";
 
 				case vga_coords.y(8 downto 4) is
 				when "00000" =>
-					case vga_coords.x(9 downto 4) is
-					when "000001" => current_char_reg <= X"46"; -- F
-					when "000010" => current_char_reg <= X"50"; -- P
-					when "000011" => current_char_reg <= X"47"; -- G
-					when "000100" => current_char_reg <= X"41"; -- A
-					when "000101" => current_char_reg <= X"43"; -- C
-					when "000110" => current_char_reg <= X"48"; -- H
-					when "000111" => current_char_reg <= X"45"; -- E
-					when "001000" => current_char_reg <= X"53"; -- S
-					when "001001" => current_char_reg <= X"53"; -- S
+					case vga_coords.x(9 downto 3) is
+					when "0000010" => current_char_reg <= X"46"; -- F
+					when "0000011" => current_char_reg <= X"50"; -- P
+					when "0000100" => current_char_reg <= X"47"; -- G
+					when "0000101" => current_char_reg <= X"41"; -- A
+					when "0000110" => current_char_reg <= X"43"; -- C
+					when "0000111" => current_char_reg <= X"48"; -- H
+					when "0001000" => current_char_reg <= X"45"; -- E
+					when "0001001" => current_char_reg <= X"53"; -- S
+					when "0001010" => current_char_reg <= X"53"; -- S
 					when others =>
 						null;
 					end case;
 				when "00010" =>
 					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"38";
+					when "000000" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"38";
+						else
+							current_char_reg <= X"31";
+						end if;
 					when others =>
 						null;
 					end case;
 				when "00101" =>
 					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"37";
+					when "000000" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"37";
+						else
+							current_char_reg <= X"32";
+						end if;
 					when others =>
 						null;
 					end case;
 				when "01000" =>
 					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"36";
+					when "000000" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"36";
+						else
+							current_char_reg <= X"33";
+						end if;
 					when others =>
 						null;
 					end case;
 				when "01011" =>
 					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"35";
+					when "000000" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"35";
+						else
+							current_char_reg <= X"34";
+						end if;
 					when others =>
 						null;
 					end case;
 				when "01110" =>
 					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"34";
+					when "000000" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"34";
+						else
+							current_char_reg <= X"35";
+						end if;
 					when others =>
 						null;
 					end case;
 				when "10001" =>
 					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"33";
+					when "000000" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"33";
+						else
+							current_char_reg <= X"36";
+						end if;
 					when others =>
 						null;
 					end case;
 				when "10100" =>
 					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"32";
+					when "000000" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"32";
+						else
+							current_char_reg <= X"37";
+						end if;
+					when others =>
+						null;
+					end case;
+				when "10110" =>
+					case vga_coords.x(9 downto 3) is
+					when "0110010" => current_char_reg <= X"46"; -- F
+					when "0110011" => current_char_reg <= X"6C"; -- l
+					when "0110100" => current_char_reg <= X"69"; -- i
+					when "0110101" => current_char_reg <= X"70"; -- p
 					when others =>
 						null;
 					end case;
 				when "10111" =>
-					case vga_coords.x(9 downto 4) is
-					when "000000" => current_char_reg <= X"31";
+					case vga_coords.x(9 downto 3) is
+					when "0000000" | "0000001" =>
+						vga_matrix_reg.char_dw <= '1';
+						if white_top = '0' then
+							current_char_reg <= X"31";
+						else
+							current_char_reg <= X"38";
+						end if;
+					when "0110010" => current_char_reg <= X"0A"; -- down arrow
+					when "0110011" => if white_top = '0' then current_char_reg <= X"57"; else current_char_reg <= X"42"; end if; -- W / B
+					when "0110100" => if white_top = '0' then current_char_reg <= X"68"; else current_char_reg <= X"6C"; end if; -- h / l
+					when "0110101" => if white_top = '0' then current_char_reg <= X"69"; else current_char_reg <= X"61"; end if; -- i / a
+					when "0110110" => if white_top = '0' then current_char_reg <= X"74"; else current_char_reg <= X"63"; end if; -- t / c
+					when "0110111" => if white_top = '0' then current_char_reg <= X"65"; else current_char_reg <= X"6B"; end if; -- e / k
 					when others =>
 						null;
 					end case;
 				when "11001" =>
+					vga_matrix_reg.char_dw <= '1';
 					case vga_coords.x(9 downto 4) is
-					when "000010" => current_char_reg <= X"61";
-					when "000101" => current_char_reg <= X"62";
-					when "001000" => current_char_reg <= X"63";
-					when "001011" => current_char_reg <= X"64";
-					when "001110" => current_char_reg <= X"65";
-					when "010001" => current_char_reg <= X"66";
-					when "010100" => current_char_reg <= X"67";
-					when "010111" => current_char_reg <= X"68";
+					when "000010" => if white_top = '0' then current_char_reg <= X"61"; else current_char_reg <= X"68"; end if; -- a/h
+					when "000101" => if white_top = '0' then current_char_reg <= X"62"; else current_char_reg <= X"67"; end if; -- b/g
+					when "001000" => if white_top = '0' then current_char_reg <= X"63"; else current_char_reg <= X"66"; end if; -- c/f
+					when "001011" => if white_top = '0' then current_char_reg <= X"64"; else current_char_reg <= X"65"; end if; -- d/e
+					when "001110" => if white_top = '0' then current_char_reg <= X"65"; else current_char_reg <= X"64"; end if; -- e/d
+					when "010001" => if white_top = '0' then current_char_reg <= X"66"; else current_char_reg <= X"63"; end if; -- f/c
+					when "010100" => if white_top = '0' then current_char_reg <= X"67"; else current_char_reg <= X"62"; end if; -- g/b
+					when "010111" => if white_top = '0' then current_char_reg <= X"68"; else current_char_reg <= X"61"; end if; -- h/a
 					when others =>
 						null;
 					end case;
@@ -329,7 +403,7 @@ begin
 			X"38", X"0C", X"0C", X"0C", X"38", X"F0", X"00", X"00",
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
-			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
+			X"18", X"18", X"18", X"99", X"5A", X"3C", X"18", X"00", -- 0A Down arrow
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
@@ -385,7 +459,7 @@ begin
 			X"1C", X"22", X"02", X"04", X"08", X"00", X"08", X"00", -- ?
 			X"1C", X"22", X"2E", X"2A", X"2E", X"20", X"1C", X"00", -- @
 			X"1C", X"22", X"22", X"3E", X"22", X"22", X"22", X"00", -- A
-			X"3C", X"22", X"22", X"3C", X"22", X"22", X"3C", X"00", -- B
+			X"78", X"24", X"24", X"3C", X"22", X"22", X"7C", X"00", -- B
 			X"1C", X"22", X"20", X"20", X"20", X"22", X"1C", X"00", -- C
 			X"38", X"24", X"22", X"22", X"22", X"24", X"38", X"00", -- D
 			X"3E", X"20", X"20", X"3C", X"20", X"20", X"3E", X"00", -- E
@@ -690,9 +764,21 @@ begin
 	color_blk : block
 		signal vga_color_reg : vid_stage_t;
 		signal color_reg : color_t := C_BLANK;
+		signal border_cnt_reg : unsigned(2 downto 0) := (others => '0');
 	begin
 		vga_color <= vga_color_reg;
 		current_color <= color_reg;
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				if ena_1sec = '1' then
+					if (not border_cnt_reg) /= 0 then
+						border_cnt_reg <= border_cnt_reg + 1;
+					end if;
+				end if;
+			end if;
+		end process;
 
 		process(clk)
 		begin
@@ -714,9 +800,18 @@ begin
 						end if;
 					end if;
 				end if;
-				if current_pixels(to_integer(7-vga_character.x(3 downto 1))) = '1' then
-					color_reg <= C_CHARACTER;
+				if vga_character.char_dw = '0' then
+					-- Narrow 80 column character
+					if current_pixels(to_integer(7-vga_character.x(2 downto 0))) = '1' then
+						color_reg <= C_CHARACTER;
+					end if;
+				else
+					-- Wide 40 column character
+					if current_pixels(to_integer(7-vga_character.x(3 downto 1))) = '1' then
+						color_reg <= C_CHARACTER;
+					end if;
 				end if;
+
 				if vga_character.cursor = '1' then
 					if (cursor_row = vga_character.board_row) and (cursor_col = vga_character.board_col) then
 						if (vga_character.board_colx = 0) or (vga_character.board_colx = 1) or (vga_character.board_colx = 46) or (vga_character.board_colx = 47)
@@ -725,11 +820,13 @@ begin
 						end if;
 					end if;
 				end if;
-				if ((vga_character.x < 2) or (vga_character.x >= 638 and vga_character.x < 640)) and (vga_character.y < 480) then
-					color_reg <= C_BORDER;
-				end if;
-				if ((vga_character.y < 2) or (vga_character.y >= 478 and vga_character.y < 480)) and (vga_character.x < 640) then
-					color_reg <= C_BORDER;
+				if border_cnt_reg < 5 then
+					if ((vga_character.x < 2) or (vga_character.x >= 638 and vga_character.x < 640)) and (vga_character.y < 480) then
+						color_reg <= C_BORDER;
+					end if;
+					if ((vga_character.y < 2) or (vga_character.y >= 478 and vga_character.y < 480)) and (vga_character.x < 640) then
+						color_reg <= C_BORDER;
+					end if;
 				end if;
 
 				-- Never output pixels outside visible area

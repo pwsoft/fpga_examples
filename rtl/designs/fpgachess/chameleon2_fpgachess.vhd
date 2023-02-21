@@ -215,6 +215,7 @@ begin
 			port map (
 				clk => sysclk,
 				ena_1khz => ena_1khz,
+				ena_1sec => ena_1sec,
 
 				cursor_up => joystick_active_high(0),
 				cursor_down => joystick_active_high(1),
