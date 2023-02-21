@@ -18,7 +18,7 @@ entity fpgachess_ui is
 		cursor_enter : in std_logic;
 
 		cursor_row : out unsigned(2 downto 0);
-		cursor_col : out unsigned(2 downto 0)
+		cursor_col : out unsigned(3 downto 0)
 	);
 end entity;
 
@@ -107,7 +107,7 @@ begin
 
 	menu_blk : block
 		signal cursor_row_reg : unsigned(2 downto 0) := (others => '0');
-		signal cursor_col_reg : unsigned(2 downto 0) := (others => '0');
+		signal cursor_col_reg : unsigned(3 downto 0) := (others => '0');
 	begin
 		cursor_row <= cursor_row_reg;
 		cursor_col <= cursor_col_reg;
@@ -124,7 +124,7 @@ begin
 				if (cursor_left_trig = '1') and (cursor_col_reg /= 0) then
 					cursor_col_reg <= cursor_col_reg - 1;
 				end if;
-				if (cursor_right_trig = '1') and (cursor_col_reg /= 7) then
+				if (cursor_right_trig = '1') and (cursor_col_reg /= 8) then
 					cursor_col_reg <= cursor_col_reg + 1;
 				end if;
 			end if;

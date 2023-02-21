@@ -29,7 +29,7 @@ end entity;
 
 architecture rtl of fpgachess_top is
 	signal cursor_row : unsigned(2 downto 0);
-	signal cursor_col : unsigned(2 downto 0);
+	signal cursor_col : unsigned(3 downto 0);
 	signal vid_row : unsigned(2 downto 0);
 	signal vid_col : unsigned(2 downto 0);
 	signal vid_piece : piece_t;

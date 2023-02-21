@@ -15,8 +15,8 @@ entity fpgachess_video is
 		clk : in std_logic;
 		white_top : in std_logic;
 
-		cursor_col : in unsigned(2 downto 0);
 		cursor_row : in unsigned(2 downto 0);
+		cursor_col : in unsigned(3 downto 0);
 
 		row : out unsigned(2 downto 0);
 		col : out unsigned(2 downto 0);
@@ -53,8 +53,10 @@ architecture rtl of fpgachess_video is
 			y : unsigned(11 downto 0);
 
 			board : std_logic;
+			cursor : std_logic;
 			-- Selects the chess cell currently rendered, only valid if "board" is set
-			board_col : unsigned(2 downto 0);
+			-- Also used for cursor display, col is bigger as the board to allow access the menu next to the board
+			board_col : unsigned(3 downto 0);
 			board_row : unsigned(2 downto 0);
 			-- Coordinates within a chess cell, only valid if "board" is set
 			board_colx : unsigned(5 downto 0);
@@ -101,9 +103,11 @@ begin
 			ySyncTo => to_unsigned(502, 12)
 		);
 
+	-- Initialize video pipeline with sane defaults
 	vga_master.board <= '0';
-	vga_master.board_col <= "000";
-	vga_master.board_row <= "000";
+	vga_master.cursor <= '0';
+	vga_master.board_col <= (others => '0');
+	vga_master.board_row <= (others => '0');
 	vga_master.board_colx <= (others => '0');
 	vga_master.board_rowy <= (others => '0');
 
@@ -114,13 +118,14 @@ begin
 		signal vga_coords_reg : vid_stage_t;
 		signal board_xrun_reg : std_logic := '0';
 		signal board_yrun_reg : std_logic := '0';
+		signal board_col07_reg : std_logic := '0';
 		signal board_xcnt_reg : unsigned(5 downto 0) := (others => '0');
 		signal board_ycnt_reg : unsigned(5 downto 0) := (others => '0');
-		signal board_col_reg : unsigned(2 downto 0) := (others => '0');
+		signal board_col_reg : unsigned(3 downto 0) := (others => '0');
 		signal board_row_reg : unsigned(2 downto 0) := (others => '0');
 	begin
 		vga_coords <= vga_coords_reg;
-		col <= board_col_reg;
+		col <= board_col_reg(col'range);
 		row <= not board_row_reg;
 
 		process(clk)
@@ -130,7 +135,10 @@ begin
 
 				if vga_master.ena_pixel = '1' then
 					if vga_master.x = board_xpos-1 then
+						board_xcnt_reg <= (others => '0');
+						board_col_reg <= (others => '0');
 						board_xrun_reg <= '1';
+						board_col07_reg <= '1';
 					end if;
 					if board_xrun_reg = '1' then
 						board_xcnt_reg <= board_xcnt_reg + 1;
@@ -139,6 +147,10 @@ begin
 						board_xcnt_reg <= (others => '0');
 						board_col_reg <= board_col_reg + 1;
 						if board_col_reg = 7 then
+							board_col07_reg <= '0';
+						end if;
+						-- Add two extra columns on the right of the board for the menu
+						if board_col_reg = 9 then
 							board_xrun_reg <= '0';
 						end if;
 					end if;
@@ -146,6 +158,8 @@ begin
 
 				if end_of_line = '1' then
 					if vga_master.y = board_ypos then
+						board_ycnt_reg <= (others => '0');
+						board_row_reg <= (others => '0');
 						board_yrun_reg <= '1';
 					end if;
 					if board_yrun_reg = '1' then
@@ -160,7 +174,8 @@ begin
 					end if;
 				end if;
 
-				vga_coords_reg.board <= board_xrun_reg and board_yrun_reg;
+				vga_coords_reg.board <= board_col07_reg and board_yrun_reg;
+				vga_coords_reg.cursor <= board_xrun_reg and board_yrun_reg;
 				vga_coords_reg.board_col <= board_col_reg;
 				vga_coords_reg.board_row <= board_row_reg;
 				vga_coords_reg.board_colx <= board_xcnt_reg;
@@ -676,12 +691,6 @@ begin
 					if (vga_character.board_col(0) xor vga_character.board_row(0)) = '1' then
 						color_reg <= C_BOARD_DARK;
 					end if;
-					if (cursor_row = vga_character.board_row) and (cursor_col = vga_character.board_col) then
-						if (vga_character.board_colx = 0) or (vga_character.board_colx = 1) or (vga_character.board_colx = 46) or (vga_character.board_colx = 47)
-						or (vga_character.board_rowy = 0) or (vga_character.board_rowy = 1) or (vga_character.board_rowy = 46) or (vga_character.board_rowy = 47) then
-							color_reg <= C_BOARD_CURSOR;
-						end if;
-					end if;
 
 					if piece_pixels(to_integer(47-vga_character.board_colx)) = '1' then
 						color_reg <= C_PIECE_BLACK;
@@ -692,6 +701,14 @@ begin
 				end if;
 				if current_pixels(to_integer(7-vga_character.x(3 downto 1))) = '1' then
 					color_reg <= C_CHARACTER;
+				end if;
+				if vga_character.cursor = '1' then
+					if (cursor_row = vga_character.board_row) and (cursor_col = vga_character.board_col) then
+						if (vga_character.board_colx = 0) or (vga_character.board_colx = 1) or (vga_character.board_colx = 46) or (vga_character.board_colx = 47)
+						or (vga_character.board_rowy = 0) or (vga_character.board_rowy = 1) or (vga_character.board_rowy = 46) or (vga_character.board_rowy = 47) then
+							color_reg <= C_BOARD_CURSOR;
+						end if;
+					end if;
 				end if;
 				if ((vga_character.x < 2) or (vga_character.x >= 638 and vga_character.x < 640)) and (vga_character.y < 480) then
 					color_reg <= C_BORDER;
