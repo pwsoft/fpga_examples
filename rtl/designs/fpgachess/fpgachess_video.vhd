@@ -39,6 +39,7 @@ use work.fpgachess_pkg.all;
 
 entity fpgachess_video is
 	generic (
+		ply_count_bits : integer;
 		board_xpos : integer := 16;
 		board_ypos : integer := 16
 	);
@@ -54,9 +55,15 @@ entity fpgachess_video is
 		cursor_select_row : in unsigned(2 downto 0);
 		cursor_select_col : in unsigned(2 downto 0);
 
-		row : out unsigned(2 downto 0);
-		col : out unsigned(2 downto 0);
+		vid_line : out unsigned(5 downto 0);
+		vid_row : out unsigned(2 downto 0);
+		vid_col : out unsigned(2 downto 0);
 		piece : in piece_t;
+
+		move_show : in std_logic;
+		move_ply : in unsigned(ply_count_bits-1 downto 0);
+		move_from : in unsigned(5 downto 0);
+		move_to : in unsigned(5 downto 0);
 
 		red : out unsigned(7 downto 0);
 		grn : out unsigned(7 downto 0);
@@ -168,8 +175,9 @@ begin
 		signal board_row_reg : unsigned(2 downto 0) := (others => '0');
 	begin
 		vga_coords <= vga_coords_reg;
-		col <= board_col_reg(col'range) xor (white_top & white_top & white_top);
-		row <= (not board_row_reg) xor (white_top & white_top & white_top);
+		vid_line <= vga_master.y(9 downto 4);
+		vid_col <= board_col_reg(vid_col'range) xor (white_top & white_top & white_top);
+		vid_row <= (not board_row_reg) xor (white_top & white_top & white_top);
 
 		process(clk)
 		begin
@@ -233,15 +241,66 @@ begin
 	matrix_blk : block
 		signal vga_matrix_reg : vid_stage_t;
 		signal current_char_reg : unsigned(7 downto 0);
+		signal move_ply_prev_reg : unsigned(move_ply'range) := (others => '0');
+		signal move_ply_convert_reg : unsigned(move_ply'high+1 downto 0) := (others => '0');
+		signal move_ply_100_reg : unsigned(7 downto 0) := (others => '0');
+		signal move_ply_10_reg : unsigned(7 downto 0) := (others => '0');
+		signal move_ply_1_reg : unsigned(7 downto 0) := (others => '0');
 	begin
 		vga_matrix <= vga_matrix_reg;
 		current_char <= current_char_reg;
+
+		-- Convert current ply from binary to decimal digits for display
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				if move_ply /= move_ply_prev_reg then
+					move_ply_prev_reg <= move_ply;
+					move_ply_convert_reg <= ("0" & move_ply) + 1;
+					move_ply_100_reg <= X"30";
+					move_ply_10_reg <= X"30";
+					move_ply_1_reg <= X"30";
+				elsif move_ply_convert_reg > 99 then
+					move_ply_convert_reg <= move_ply_convert_reg - 100;
+					move_ply_100_reg(3 downto 0) <= move_ply_100_reg(3 downto 0) + 1;
+				elsif move_ply_convert_reg > 9 then
+					move_ply_convert_reg <= move_ply_convert_reg - 10;
+					move_ply_10_reg(3 downto 0) <= move_ply_10_reg(3 downto 0) + 1;
+				else
+					move_ply_1_reg(3 downto 0) <= move_ply_convert_reg(3 downto 0);
+					if move_ply_100_reg(3 downto 0) = 0 then
+						move_ply_100_reg(4) <= '0'; -- Space
+						if move_ply_10_reg(3 downto 0) = 0 then
+							move_ply_10_reg(4) <= '0'; -- Space
+						end if;
+					end if;
+				end if;
+			end if;
+		end process;
+
 		process(clk)
 		begin
 			if rising_edge(clk) then
 				vga_matrix_reg <= vga_coords;
 				vga_matrix_reg.char_dh <= '1';
 				current_char_reg <= X"20";
+
+				-- Display move history on the right side of the screen
+				if move_show = '1' then
+					case vga_coords.x(9 downto 3) is
+					when "1000110" => current_char_reg <= move_ply_100_reg;
+					when "1000111" => current_char_reg <= move_ply_10_reg;
+					when "1001000" => current_char_reg <= move_ply_1_reg;
+					--   "1001001"
+					when "1001010" => current_char_reg <= X"65";
+					when "1001011" => current_char_reg <= X"31";
+					when "1001100" => current_char_reg <= X"2D";
+					when "1001101" => current_char_reg <= X"66";
+					when "1001110" => current_char_reg <= X"32";
+					when others =>
+						null;
+					end case;
+				end if;
 
 				case vga_coords.y(8 downto 4) is
 				when "00000" =>

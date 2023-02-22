@@ -61,6 +61,8 @@ end entity;
 -- -----------------------------------------------------------------------
 
 architecture rtl of fpgachess_top is
+	constant ply_count_bits : integer := 8;
+
 	signal new_game_trig : std_logic;
 	signal white_top : std_logic;
 	signal move_trig : std_logic;
@@ -69,9 +71,15 @@ architecture rtl of fpgachess_top is
 	signal cursor_select : std_logic;
 	signal cursor_select_row : unsigned(2 downto 0);
 	signal cursor_select_col : unsigned(2 downto 0);
+	signal vid_line : unsigned(5 downto 0);
 	signal vid_row : unsigned(2 downto 0);
 	signal vid_col : unsigned(2 downto 0);
 	signal vid_piece : piece_t;
+
+	signal vid_move_show : std_logic;
+	signal vid_move_ply : unsigned(ply_count_bits-1 downto 0);
+	signal vid_move_from : unsigned(5 downto 0);
+	signal vid_move_to : unsigned(5 downto 0);
 begin
 	board_blk : block
 		signal move_from : unsigned(5 downto 0);
@@ -116,7 +124,38 @@ begin
 			cursor_select_col => cursor_select_col
 		);
 
+	moves_blk : block
+		signal move_from : unsigned(5 downto 0);
+		signal move_to : unsigned(5 downto 0);
+	begin
+		moves_inst : entity work.fpgachess_moves
+			generic map (
+				ply_count_bits => ply_count_bits,
+				vid_line_start => 1,
+				vid_line_end => 25
+			)
+			port map (
+				clk => clk,
+
+				new_game_trig => new_game_trig,
+				store_move_trig => move_trig,
+				move_from => move_from,
+				move_to => move_to,
+
+				vid_line => vid_line,
+				vid_move_show => vid_move_show,
+				vid_move_ply => vid_move_ply,
+				vid_move_from => vid_move_from,
+				vid_move_to => vid_move_to
+			);
+		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+	end block;
+
 	video_inst : entity work.fpgachess_video
+		generic map (
+			ply_count_bits => ply_count_bits
+		)
 		port map (
 			clk => clk,
 			ena_1sec => ena_1sec,
@@ -129,9 +168,15 @@ begin
 			cursor_select_row => cursor_select_row,
 			cursor_select_col => cursor_select_col,
 
-			row => vid_row,
-			col => vid_col,
+			vid_line => vid_line,
+			vid_row => vid_row,
+			vid_col => vid_col,
 			piece => vid_piece,
+
+			move_show => vid_move_show,
+			move_ply => vid_move_ply,
+			move_from => vid_move_from,
+			move_to => vid_move_to,
 
 			red => red,
 			grn => grn,
