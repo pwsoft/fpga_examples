@@ -40,6 +40,10 @@ entity fpgachess_board is
 	port (
 		clk : in std_logic;
 
+		move_trig : in std_logic;
+		move_from : in unsigned(5 downto 0);
+		move_to : in unsigned(5 downto 0);
+
 		vid_col : in unsigned(2 downto 0);
 		vid_row : in unsigned(2 downto 0);
 		vid_piece : out piece_t
@@ -72,6 +76,16 @@ architecture rtl of fpgachess_board is
 	signal display_col7_reg : piece_t := piece_white & piece_none;
 begin
 	vid_piece <= vid_piece_reg;
+
+	process(clk)
+	begin
+		if rising_edge(clk) then
+			if move_trig = '1' then
+				display_board_reg(to_integer(move_to)) <= display_board_reg(to_integer(move_from));
+				display_board_reg(to_integer(move_from)) <= piece_white & piece_none;
+			end if;
+		end if;
+	end process;
 
 	process(clk)
 	begin

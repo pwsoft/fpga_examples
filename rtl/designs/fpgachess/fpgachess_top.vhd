@@ -62,20 +62,35 @@ end entity;
 
 architecture rtl of fpgachess_top is
 	signal white_top : std_logic;
+	signal move_trig : std_logic;
 	signal cursor_row : unsigned(2 downto 0);
 	signal cursor_col : unsigned(3 downto 0);
+	signal cursor_select : std_logic;
+	signal cursor_select_row : unsigned(2 downto 0);
+	signal cursor_select_col : unsigned(2 downto 0);
 	signal vid_row : unsigned(2 downto 0);
 	signal vid_col : unsigned(2 downto 0);
 	signal vid_piece : piece_t;
 begin
-	board_inst : entity work.fpgachess_board
-		port map (
-			clk => clk,
+	board_blk : block
+		signal move_from : unsigned(5 downto 0);
+		signal move_to : unsigned(5 downto 0);
+	begin
+		board_inst : entity work.fpgachess_board
+			port map (
+				clk => clk,
 
-			vid_col => vid_col,
-			vid_row => vid_row,
-			vid_piece => vid_piece
-		);
+				move_trig => move_trig,
+				move_from => move_from,
+				move_to => move_to,
+
+				vid_col => vid_col,
+				vid_row => vid_row,
+				vid_piece => vid_piece
+			);
+		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+	end block;
 
 	ui_inst : entity work.fpgachess_ui
 		port map (
@@ -89,8 +104,12 @@ begin
 			cursor_enter => cursor_enter,
 
 			white_top => white_top,
+			move_trig => move_trig,
 			cursor_row => cursor_row,
-			cursor_col => cursor_col
+			cursor_col => cursor_col,
+			cursor_select => cursor_select,
+			cursor_select_row => cursor_select_row,
+			cursor_select_col => cursor_select_col
 		);
 
 	video_inst : entity work.fpgachess_video
@@ -102,6 +121,9 @@ begin
 
 			cursor_row => cursor_row,
 			cursor_col => cursor_col,
+			cursor_select => cursor_select,
+			cursor_select_row => cursor_select_row,
+			cursor_select_col => cursor_select_col,
 
 			row => vid_row,
 			col => vid_col,

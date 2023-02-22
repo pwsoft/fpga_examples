@@ -50,6 +50,9 @@ entity fpgachess_video is
 
 		cursor_row : in unsigned(2 downto 0);
 		cursor_col : in unsigned(3 downto 0);
+		cursor_select : in std_logic;
+		cursor_select_row : in unsigned(2 downto 0);
+		cursor_select_col : in unsigned(2 downto 0);
 
 		row : out unsigned(2 downto 0);
 		col : out unsigned(2 downto 0);
@@ -70,7 +73,7 @@ architecture rtl of fpgachess_video is
 	type color_t is (
 			C_BLANK, C_BACKGROUND, C_BORDER,
 			C_CHARACTER,
-			C_BOARD_CURSOR, C_BOARD_LIGHT, C_BOARD_DARK,
+			C_BOARD_CURSOR1, C_BOARD_CURSOR2, C_BOARD_LIGHT, C_BOARD_DARK,
 			C_PIECE_BLACK, C_PIECE_WHITE
 		);
 	signal current_color : color_t;
@@ -813,10 +816,16 @@ begin
 				end if;
 
 				if vga_character.cursor = '1' then
-					if (cursor_row = vga_character.board_row) and (cursor_col = vga_character.board_col) then
-						if (vga_character.board_colx = 0) or (vga_character.board_colx = 1) or (vga_character.board_colx = 46) or (vga_character.board_colx = 47)
-						or (vga_character.board_rowy = 0) or (vga_character.board_rowy = 1) or (vga_character.board_rowy = 46) or (vga_character.board_rowy = 47) then
-							color_reg <= C_BOARD_CURSOR;
+					if (vga_character.board_colx = 0) or (vga_character.board_colx = 1) or (vga_character.board_colx = 46) or (vga_character.board_colx = 47)
+					or (vga_character.board_rowy = 0) or (vga_character.board_rowy = 1) or (vga_character.board_rowy = 46) or (vga_character.board_rowy = 47) then
+						-- Cursor to select board cells or menu items
+						if (cursor_row = vga_character.board_row) and (cursor_col = vga_character.board_col) then
+							color_reg <= C_BOARD_CURSOR1;
+						end if;
+
+						-- Highlight a selected board cell as movement starting point
+						if (cursor_select = '1') and (cursor_select_row = vga_character.board_row) and (("0" & cursor_select_col) = vga_character.board_col) then
+							color_reg <= C_BOARD_CURSOR2;
 						end if;
 					end if;
 				end if;
@@ -874,9 +883,12 @@ begin
 						red_reg <= (others => '0');
 						grn_reg <= (others => '1');
 						blu_reg <= (others => '1');
-					when C_BOARD_CURSOR =>
+					when C_BOARD_CURSOR1 =>
 						red_reg <= X"FF";
 						grn_reg <= X"FF";
+					when C_BOARD_CURSOR2 =>
+						grn_reg <= X"FF";
+						blu_reg <= X"FF";
 					when C_BOARD_LIGHT =>
 						grn_reg <= X"80";
 					when C_BOARD_DARK =>
