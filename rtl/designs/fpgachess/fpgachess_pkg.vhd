@@ -36,6 +36,7 @@ package fpgachess_pkg is
 	subtype piece_t is unsigned(3 downto 0);
 	constant piece_white  : std_logic := '0';
 	constant piece_black  : std_logic := '1';
+	constant piece_empty  : unsigned(3 downto 0) := "0000";
 	constant piece_none   : unsigned(2 downto 0) := "000";
 	constant piece_pawn   : unsigned(2 downto 0) := "001";
 	constant piece_bishop : unsigned(2 downto 0) := "010";

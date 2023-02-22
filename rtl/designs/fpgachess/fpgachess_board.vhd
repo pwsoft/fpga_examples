@@ -66,23 +66,32 @@ architecture rtl of fpgachess_board is
 			piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn,
 			piece_black & piece_rook, piece_black & piece_knight, piece_black & piece_bishop, piece_black & piece_queen, piece_black & piece_king, piece_black & piece_bishop, piece_black & piece_knight, piece_black & piece_rook
 		);
-	signal display_col0_reg : piece_t := piece_white & piece_none;
-	signal display_col1_reg : piece_t := piece_white & piece_none;
-	signal display_col2_reg : piece_t := piece_white & piece_none;
-	signal display_col3_reg : piece_t := piece_white & piece_none;
-	signal display_col4_reg : piece_t := piece_white & piece_none;
-	signal display_col5_reg : piece_t := piece_white & piece_none;
-	signal display_col6_reg : piece_t := piece_white & piece_none;
-	signal display_col7_reg : piece_t := piece_white & piece_none;
+	signal display_col0_reg : piece_t := piece_empty;
+	signal display_col1_reg : piece_t := piece_empty;
+	signal display_col2_reg : piece_t := piece_empty;
+	signal display_col3_reg : piece_t := piece_empty;
+	signal display_col4_reg : piece_t := piece_empty;
+	signal display_col5_reg : piece_t := piece_empty;
+	signal display_col6_reg : piece_t := piece_empty;
+	signal display_col7_reg : piece_t := piece_empty;
+
+	signal move_piece_reg : piece_t := piece_empty;
+	signal move_phase2_reg : std_logic := '0';
 begin
 	vid_piece <= vid_piece_reg;
 
 	process(clk)
 	begin
 		if rising_edge(clk) then
+			move_phase2_reg <= '0';
+
 			if move_trig = '1' then
-				display_board_reg(to_integer(move_to)) <= display_board_reg(to_integer(move_from));
-				display_board_reg(to_integer(move_from)) <= piece_white & piece_none;
+				move_phase2_reg <= '1';
+				move_piece_reg <= display_board_reg(to_integer(move_from));
+			end if;
+			if move_phase2_reg = '1' then
+				display_board_reg(to_integer(move_to)) <= move_piece_reg;
+				display_board_reg(to_integer(move_from)) <= piece_empty;
 			end if;
 		end if;
 	end process;
