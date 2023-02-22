@@ -61,6 +61,7 @@ end entity;
 -- -----------------------------------------------------------------------
 
 architecture rtl of fpgachess_top is
+	signal new_game_trig : std_logic;
 	signal white_top : std_logic;
 	signal move_trig : std_logic;
 	signal cursor_row : unsigned(2 downto 0);
@@ -79,6 +80,8 @@ begin
 		board_inst : entity work.fpgachess_board
 			port map (
 				clk => clk,
+
+				new_game_trig => new_game_trig,
 
 				move_trig => move_trig,
 				move_from => move_from,
@@ -103,6 +106,7 @@ begin
 			cursor_right => cursor_right,
 			cursor_enter => cursor_enter,
 
+			new_game_trig => new_game_trig,
 			white_top => white_top,
 			move_trig => move_trig,
 			cursor_row => cursor_row,

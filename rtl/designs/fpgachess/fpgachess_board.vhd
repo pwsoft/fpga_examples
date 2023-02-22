@@ -40,6 +40,8 @@ entity fpgachess_board is
 	port (
 		clk : in std_logic;
 
+		new_game_trig : in std_logic;
+
 		move_trig : in std_logic;
 		move_from : in unsigned(5 downto 0);
 		move_to : in unsigned(5 downto 0);
@@ -85,6 +87,18 @@ begin
 		if rising_edge(clk) then
 			move_phase2_reg <= '0';
 
+			if new_game_trig = '1' then
+				display_board_reg <= (
+					piece_white & piece_rook, piece_white & piece_knight, piece_white & piece_bishop, piece_white & piece_queen, piece_white & piece_king, piece_white & piece_bishop, piece_white & piece_knight, piece_white & piece_rook,
+					piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn,
+					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
+					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
+					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
+					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
+					piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn,
+					piece_black & piece_rook, piece_black & piece_knight, piece_black & piece_bishop, piece_black & piece_queen, piece_black & piece_king, piece_black & piece_bishop, piece_black & piece_knight, piece_black & piece_rook
+				);
+			end if;
 			if move_trig = '1' then
 				move_phase2_reg <= '1';
 				move_piece_reg <= display_board_reg(to_integer(move_from));

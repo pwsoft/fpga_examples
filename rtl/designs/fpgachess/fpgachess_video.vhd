@@ -258,15 +258,27 @@ begin
 					when others =>
 						null;
 					end case;
+				when "00001" =>
+					case vga_coords.x(9 downto 3) is
+					when "0110010" => current_char_reg <= X"4E"; -- N
+					when "0110011" => current_char_reg <= X"65"; -- e
+					when "0110100" => current_char_reg <= X"77"; -- w
+					when others =>
+						null;
+					end case;
 				when "00010" =>
-					case vga_coords.x(9 downto 4) is
-					when "000000" =>
+					case vga_coords.x(9 downto 3) is
+					when "0000000" | "0000001" =>
 						vga_matrix_reg.char_dw <= '1';
 						if white_top = '0' then
 							current_char_reg <= X"38";
 						else
 							current_char_reg <= X"31";
 						end if;
+					when "0110010" => current_char_reg <= X"47"; -- G
+					when "0110011" => current_char_reg <= X"61"; -- a
+					when "0110100" => current_char_reg <= X"6D"; -- m
+					when "0110101" => current_char_reg <= X"65"; -- e
 					when others =>
 						null;
 					end case;

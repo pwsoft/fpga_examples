@@ -1,3 +1,35 @@
+-- -----------------------------------------------------------------------
+--
+-- FPGA-Chess
+--
+-- Chess game engine for programmable logic devices
+--
+-- -----------------------------------------------------------------------
+-- Copyright 2022-2023 by Peter Wendrich (pwsoft@syntiac.com)
+-- http://www.syntiac.com
+--
+-- This source file is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Lesser General Public License as published
+-- by the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This source file is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program. If not, see <http://www.gnu.org/licenses/>.
+--
+-- -----------------------------------------------------------------------
+--
+-- Part of FPGA-Chess
+-- User interface logic, processes joystick inputs to navigate the board
+-- and the menu system. Generates cursor coordinates and various action
+-- triggers that other logic can respond to.
+--
+-- -----------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -17,6 +49,7 @@ entity fpgachess_ui is
 		cursor_right : in std_logic;
 		cursor_enter : in std_logic;
 
+		new_game_trig : out std_logic;
 		white_top : out std_logic;
 		move_trig : out std_logic;
 
@@ -117,6 +150,7 @@ begin
 		signal select_row_reg : unsigned(2 downto 0) := (others => '0');
 		signal select_col_reg : unsigned(2 downto 0) := (others => '0');
 		signal select_reg : std_logic := '0';
+		signal new_game_trig_reg : std_logic := '0';
 		signal white_top_reg : std_logic := '0';
 		signal move_trig_reg : std_logic := '0';
 	begin
@@ -126,6 +160,7 @@ begin
 		cursor_select_row <= select_row_reg;
 		cursor_select_col <= select_col_reg;
 		white_top <= white_top_reg;
+		new_game_trig <= new_game_trig_reg;
 		move_trig <= move_trig_reg;
 
 		process(clk)
@@ -144,6 +179,7 @@ begin
 					cursor_col_reg <= cursor_col_reg + 1;
 				end if;
 
+				new_game_trig_reg <= '0';
 				move_trig_reg <= '0';
 				if (cursor_enter_trig = '1') then
 					if cursor_col_reg(3) = '0' then
@@ -167,6 +203,8 @@ begin
 					end if;
 
 					case cursor_row_reg & cursor_col_reg is
+					when "0001000" => -- New game
+						new_game_trig_reg <= '1';
 					when "1111000" => -- Board flip
 						white_top_reg <= not white_top_reg;
 					when others =>
