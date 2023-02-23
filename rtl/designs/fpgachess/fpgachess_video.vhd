@@ -397,27 +397,60 @@ begin
 					when others =>
 						null;
 					end case;
+				when "00100" =>
+					case vga_coords.x(9 downto 3) is
+					when "0110010" => current_char_reg <= X"41"; -- A
+					when "0110011" => current_char_reg <= X"49"; -- I
+--					when "0110100" =>
+					when "0110101" => current_char_reg <= X"68"; -- h
+					when "0110110" => current_char_reg <= X"61"; -- a
+					when "0110111" => current_char_reg <= X"73"; -- s
+					when others =>
+						null;
+					end case;
 				when "00101" =>
-					case vga_coords.x(9 downto 4) is
-					when "000000" =>
+					case vga_coords.x(9 downto 3) is
+					when "0000000" | "0000001" =>
 						vga_matrix_reg.char_dw <= '1';
 						if white_top = '0' then
 							current_char_reg <= X"37";
 						else
 							current_char_reg <= X"32";
 						end if;
+					when "0110010" => current_char_reg <= X"0B"; -- up arrow
+					-- Black/White/Both needs implementation, is placeholder text for now
+					when "0110011" => if white_top = '0' then current_char_reg <= X"57"; else current_char_reg <= X"42"; end if; -- W / B
+					when "0110100" => if white_top = '0' then current_char_reg <= X"68"; else current_char_reg <= X"6C"; end if; -- h / l
+					when "0110101" => if white_top = '0' then current_char_reg <= X"69"; else current_char_reg <= X"61"; end if; -- i / a
+					when "0110110" => if white_top = '0' then current_char_reg <= X"74"; else current_char_reg <= X"63"; end if; -- t / c
+					when "0110111" => if white_top = '0' then current_char_reg <= X"65"; else current_char_reg <= X"6B"; end if; -- e / k					
+					when others =>
+						null;
+					end case;
+				when "00111" =>
+					case vga_coords.x(9 downto 3) is
+					when "0110010" => current_char_reg <= X"53"; -- S
+					when "0110011" => current_char_reg <= X"65"; -- e
+					when "0110100" => current_char_reg <= X"61"; -- a
+					when "0110101" => current_char_reg <= X"72"; -- r
+					when "0110110" => current_char_reg <= X"63"; -- c
+					when "0110111" => current_char_reg <= X"68"; -- h
 					when others =>
 						null;
 					end case;
 				when "01000" =>
-					case vga_coords.x(9 downto 4) is
-					when "000000" =>
+					case vga_coords.x(9 downto 3) is
+					when "0000000" | "0000001" =>
 						vga_matrix_reg.char_dw <= '1';
 						if white_top = '0' then
 							current_char_reg <= X"36";
 						else
 							current_char_reg <= X"33";
 						end if;
+					when "0110010" => current_char_reg <= X"4D"; -- M
+					when "0110011" => current_char_reg <= X"6F"; -- o
+					when "0110100" => current_char_reg <= X"76"; -- v
+					when "0110101" => current_char_reg <= X"65"; -- e
 					when others =>
 						null;
 					end case;
@@ -545,7 +578,7 @@ begin
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
 			X"18", X"18", X"18", X"99", X"5A", X"3C", X"18", X"00", -- 0A Down arrow
-			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
+			X"18", X"3C", X"5A", X"99", X"18", X"18", X"18", X"00", -- 0B Up arrow
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
 			X"00", X"00", X"00", X"00", X"00", X"00", X"00", X"00",
