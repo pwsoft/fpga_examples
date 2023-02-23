@@ -62,8 +62,8 @@ entity fpgachess_video is
 
 		move_show : in unsigned(1 downto 0);
 		move_ply : in unsigned(ply_count_bits-1 downto 0);
-		move_from : in unsigned(5 downto 0);
-		move_to : in unsigned(5 downto 0);
+		move_white : in unsigned(11 downto 0);
+		move_black : in unsigned(11 downto 0);
 
 		red : out unsigned(7 downto 0);
 		grn : out unsigned(7 downto 0);
@@ -293,17 +293,17 @@ begin
 					when "1000001" => current_char_reg <= move_10_reg;
 					when "1000010" => current_char_reg <= move_1_reg;
 					--   "1000011"
-					when "1000100" => current_char_reg <= X"65";
-					when "1000101" => current_char_reg <= X"31";
-					when "1000110" => current_char_reg <= X"2D";
-					when "1000111" => current_char_reg <= X"66";
-					when "1001000" => current_char_reg <= X"32";
+					when "1000100" => current_char_reg <= X"61" + move_white( 8 downto 6);
+					when "1000101" => current_char_reg <= X"31" + move_white(11 downto 9);
+					when "1000110" => current_char_reg <= X"61" + move_white( 2 downto 0);
+					when "1000111" => current_char_reg <= X"31" + move_white( 5 downto 3);
+					--   "1001000"
 					--   "1001001"
-					when "1001010" => if (move_show(1) = '1') then current_char_reg <= X"65"; end if;
-					when "1001011" => if (move_show(1) = '1') then current_char_reg <= X"31"; end if;
-					when "1001100" => if (move_show(1) = '1') then current_char_reg <= X"2D"; end if;
-					when "1001101" => if (move_show(1) = '1') then current_char_reg <= X"66"; end if;
-					when "1001110" => if (move_show(1) = '1') then current_char_reg <= X"32"; end if;
+					when "1001010" => if (move_show(1) = '1') then current_char_reg <= X"61" + move_black( 8 downto 6); end if;
+					when "1001011" => if (move_show(1) = '1') then current_char_reg <= X"31" + move_black(11 downto 9); end if;
+					when "1001100" => if (move_show(1) = '1') then current_char_reg <= X"61" + move_black( 2 downto 0); end if;
+					when "1001101" => if (move_show(1) = '1') then current_char_reg <= X"31" + move_black( 5 downto 3); end if;
+					--   "1001110"
 					when others =>
 						null;
 					end case;

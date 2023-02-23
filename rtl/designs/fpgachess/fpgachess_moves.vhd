@@ -55,28 +55,78 @@ entity fpgachess_moves is
 		vid_line : in unsigned(5 downto 0);
 		vid_move_show : out unsigned(1 downto 0);
 		vid_move_ply : out unsigned(ply_count_bits-1 downto 0);
-		vid_move_from : out unsigned(5 downto 0);
-		vid_move_to : out unsigned(5 downto 0)
+		vid_move_white : out unsigned(11 downto 0);
+		vid_move_black : out unsigned(11 downto 0)
 	);
 end entity;
 
 -- -----------------------------------------------------------------------
 
 architecture rtl of fpgachess_moves is
-	type moves_t is array(0 to (2**ply_count_bits)-1) of unsigned(5 downto 0);
+	type moves_t is array(0 to (2**ply_count_bits)-1) of unsigned(11 downto 0);
 	signal moves_reg : moves_t := (others => (others => '0'));
+	signal readout_reg : unsigned(11 downto 0) := (others => '0');
+
 	-- max_count_reg is one bit greater as ply result so ply<max compare also does work for last item in the storage
 	signal max_count_reg : unsigned(ply_count_bits downto 0) := (others => '0');
 
 	signal vid_move_show_reg : unsigned(vid_move_show'range) := (others => '0');
 	signal vid_move_ply_reg : unsigned(vid_move_ply'range) := (others => '0');
-	signal vid_move_from_reg : unsigned(vid_move_from'range) := (others => '0');
-	signal vid_move_to_reg : unsigned(vid_move_to'range) := (others => '0');
+	signal vid_move_white_reg : unsigned(vid_move_white'range) := (others => '0');
+	signal vid_move_black_reg : unsigned(vid_move_black'range) := (others => '0');
 begin
 	vid_move_show <= vid_move_show_reg;
 	vid_move_ply <= vid_move_ply_reg;
-	vid_move_from <= vid_move_from_reg;
-	vid_move_to <= vid_move_to_reg;
+	vid_move_white <= vid_move_white_reg;
+	vid_move_black <= vid_move_black_reg;
+
+	memory_blk : block
+		signal we_reg : std_logic := '0';
+		signal addr_reg : unsigned(ply_count_bits-1 downto 0) := (others => '0');
+
+		signal vid_ready_reg : unsigned(1 downto 0) := (others => '0');
+		signal vid_color_reg : unsigned(1 downto 0) := (others => '0');
+	begin
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				if we_reg = '1' then
+					moves_reg(to_integer(addr_reg)) <= move_from & move_to;
+				else
+					readout_reg <= moves_reg(to_integer(addr_reg));
+				end if;
+			end if;
+		end process;
+
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				we_reg <= '0';
+				vid_ready_reg <= vid_ready_reg(0) & '0';
+				vid_color_reg(1) <= vid_color_reg(0);
+
+				if store_move_trig = '1' then
+					we_reg <= '1';
+					addr_reg <= max_count_reg(addr_reg'range);
+				else
+					vid_color_reg(0) <= not vid_color_reg(0);
+					addr_reg <= vid_move_ply_reg;
+					addr_reg(0) <= not vid_color_reg(0);
+					vid_ready_reg(0) <= '1';
+				end if;
+
+				-- A history read for video output is complete (takes 2 cycles)
+				if vid_ready_reg(1) = '1' then
+					if vid_color_reg(1) = '0' then
+						vid_move_white_reg <= readout_reg;
+					else
+						vid_move_black_reg <= readout_reg;
+					end if;
+				end if;
+			end if;
+		end process;
+	end block;
 
 	process(clk)
 	begin
@@ -102,7 +152,7 @@ begin
 			if vid_move_ply_reg < max_count_reg then
 				-- At least white made a turn in this move
 				vid_move_show_reg(0) <= '1';
-				if vid_move_ply_reg+1 < max_count_reg then
+				if vid_move_ply_reg < max_count_reg-1 then
 					-- Black also made turn this move, so enable both bits
 					vid_move_show_reg(1) <= '1';
 				end if;

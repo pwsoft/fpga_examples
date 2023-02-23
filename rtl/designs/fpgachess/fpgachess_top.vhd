@@ -78,8 +78,8 @@ architecture rtl of fpgachess_top is
 
 	signal vid_move_show : unsigned(1 downto 0);
 	signal vid_move_ply : unsigned(ply_count_bits-1 downto 0);
-	signal vid_move_from : unsigned(5 downto 0);
-	signal vid_move_to : unsigned(5 downto 0);
+	signal vid_move_white : unsigned(11 downto 0);
+	signal vid_move_black : unsigned(11 downto 0);
 begin
 	board_blk : block
 		signal move_from : unsigned(5 downto 0);
@@ -146,8 +146,8 @@ begin
 				vid_line => vid_line,
 				vid_move_show => vid_move_show,
 				vid_move_ply => vid_move_ply,
-				vid_move_from => vid_move_from,
-				vid_move_to => vid_move_to
+				vid_move_white => vid_move_white,
+				vid_move_black => vid_move_black
 			);
 		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
 		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
@@ -176,8 +176,8 @@ begin
 
 			move_show => vid_move_show,
 			move_ply => vid_move_ply,
-			move_from => vid_move_from,
-			move_to => vid_move_to,
+			move_white => vid_move_white,
+			move_black => vid_move_black,
 
 			red => red,
 			grn => grn,
