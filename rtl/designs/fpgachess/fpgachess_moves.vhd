@@ -48,9 +48,9 @@ entity fpgachess_moves is
 		clk : in std_logic;
 
 		new_game_trig : in std_logic;
-		store_move_trig : in std_logic;
-		move_from : in unsigned(5 downto 0);
-		move_to : in unsigned(5 downto 0);
+		move_trig : in std_logic;
+		move_fromto : in unsigned(11 downto 0);
+		move_captured : in piece_t;
 
 		vid_line : in unsigned(5 downto 0);
 		vid_move_show : out unsigned(1 downto 0);
@@ -91,7 +91,7 @@ begin
 		begin
 			if rising_edge(clk) then
 				if we_reg = '1' then
-					moves_reg(to_integer(addr_reg)) <= move_from & move_to;
+					moves_reg(to_integer(addr_reg)) <= move_fromto;
 				else
 					readout_reg <= moves_reg(to_integer(addr_reg));
 				end if;
@@ -106,7 +106,7 @@ begin
 				vid_ready_reg <= vid_ready_reg(0) & '0';
 				vid_color_reg(1) <= vid_color_reg(0);
 
-				if store_move_trig = '1' then
+				if move_trig = '1' then
 					we_reg <= '1';
 					addr_reg <= max_count_reg(addr_reg'range);
 				else
@@ -134,7 +134,7 @@ begin
 			if new_game_trig = '1' then
 				max_count_reg <= (others => '0');
 			end if;
-			if store_move_trig = '1' then
+			if move_trig = '1' then
 				max_count_reg <= max_count_reg + 1;
 			end if;
 		end if;

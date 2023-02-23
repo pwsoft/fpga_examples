@@ -132,6 +132,7 @@ begin
 	moves_blk : block
 		signal move_from : unsigned(5 downto 0);
 		signal move_to : unsigned(5 downto 0);
+		signal move_captured : piece_t;
 	begin
 		moves_inst : entity work.fpgachess_moves
 			generic map (
@@ -144,9 +145,9 @@ begin
 				clk => clk,
 
 				new_game_trig => new_game_trig,
-				store_move_trig => move_trig,
-				move_from => move_from,
-				move_to => move_to,
+				move_trig => move_trig,
+				move_fromto => move_from & move_to,
+				move_captured => move_captured,
 
 				vid_line => vid_line,
 				vid_move_show => vid_move_show,
@@ -156,6 +157,7 @@ begin
 			);
 		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
 		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+		move_captured <= piece_empty; -- TODO
 	end block;
 
 	video_inst : entity work.fpgachess_video
