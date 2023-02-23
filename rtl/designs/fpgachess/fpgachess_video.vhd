@@ -46,6 +46,7 @@ entity fpgachess_video is
 	port (
 		clk : in std_logic;
 		ena_1sec : in std_logic;
+		reset : in std_logic;
 
 		white_top : in std_logic;
 
@@ -59,6 +60,8 @@ entity fpgachess_video is
 		vid_row : out unsigned(2 downto 0);
 		vid_col : out unsigned(2 downto 0);
 		piece : in piece_t;
+
+		vid_eval : in signed(11 downto 0);
 
 		move_show : in unsigned(1 downto 0);
 		move_ply : in unsigned(ply_count_bits-1 downto 0);
@@ -246,6 +249,14 @@ begin
 		signal move_100_reg : unsigned(7 downto 0) := (others => '0');
 		signal move_10_reg : unsigned(7 downto 0) := (others => '0');
 		signal move_1_reg : unsigned(7 downto 0) := (others => '0');
+
+		signal eval_prev_reg : signed(vid_eval'range) := (others => '0');
+		signal eval_reg : signed(vid_eval'range) := (others => '0');
+		signal eval_sign_reg : unsigned(7 downto 0) := (others => '0');
+		signal eval_1000_reg : unsigned(7 downto 0) := (others => '0');
+		signal eval_100_reg : unsigned(7 downto 0) := (others => '0');
+		signal eval_10_reg : unsigned(7 downto 0) := (others => '0');
+		signal eval_1_reg : unsigned(7 downto 0) := (others => '0');
 	begin
 		vga_matrix <= vga_matrix_reg;
 		current_char <= current_char_reg;
@@ -273,6 +284,44 @@ begin
 						move_100_reg(4) <= '0'; -- Remove leading zeros by replacing it with space (clear bit 4 so 30h becomes 20h)
 						if move_10_reg(3 downto 0) = 0 then
 							move_10_reg(4) <= '0'; -- Remove leading zeros by replacing it with space (clear bit 4 so 30h becomes 20h)
+						end if;
+					end if;
+				end if;
+			end if;
+		end process;
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				if (vid_eval /= eval_prev_reg) or (reset = '1') then
+					eval_prev_reg <= vid_eval;
+					eval_reg <= vid_eval;
+					eval_sign_reg <= X"20";
+					eval_1000_reg <= X"30";
+					eval_100_reg <= X"30";
+					eval_10_reg <= X"30";
+					eval_1_reg <= X"30";
+				elsif eval_reg < 0 then
+					eval_reg <= -eval_reg;
+					eval_sign_reg <= X"2D";
+				elsif eval_reg > 999 then
+					eval_reg <= eval_reg - 1000;
+					eval_1000_reg(3 downto 0) <= eval_1000_reg(3 downto 0) + 1;
+				elsif eval_reg > 99 then
+					eval_reg <= eval_reg - 100;
+					eval_100_reg(3 downto 0) <= eval_100_reg(3 downto 0) + 1;
+				elsif eval_reg > 9 then
+					eval_reg <= eval_reg - 10;
+					eval_10_reg(3 downto 0) <= eval_10_reg(3 downto 0) + 1;
+				else
+					eval_1_reg(3 downto 0) <= unsigned(eval_reg(3 downto 0));
+					if eval_1000_reg(3 downto 0) = 0 then
+						eval_1000_reg(4) <= '0'; -- Remove leading zeros by replacing it with space (clear bit 4 so 30h becomes 20h)
+						if eval_100_reg(3 downto 0) = 0 then
+							eval_100_reg(4) <= '0'; -- Remove leading zeros by replacing it with space (clear bit 4 so 30h becomes 20h)
+							if eval_10_reg(3 downto 0) = 0 then
+								eval_10_reg(4) <= '0'; -- Remove leading zeros by replacing it with space (clear bit 4 so 30h becomes 20h)
+							end if;
 						end if;
 					end if;
 				end if;
@@ -458,6 +507,17 @@ begin
 					when "010001" => if white_top = '0' then current_char_reg <= X"66"; else current_char_reg <= X"63"; end if; -- f/c
 					when "010100" => if white_top = '0' then current_char_reg <= X"67"; else current_char_reg <= X"62"; end if; -- g/b
 					when "010111" => if white_top = '0' then current_char_reg <= X"68"; else current_char_reg <= X"61"; end if; -- h/a
+					when others =>
+						null;
+					end case;
+				when "11011" =>
+					vga_matrix_reg.char_dw <= '1';
+					case vga_coords.x(9 downto 4) is
+					when "000000" => current_char_reg <= eval_sign_reg;
+					when "000001" => current_char_reg <= eval_1000_reg;
+					when "000010" => current_char_reg <= eval_100_reg;
+					when "000011" => current_char_reg <= eval_10_reg;
+					when "000100" => current_char_reg <= eval_1_reg;
 					when others =>
 						null;
 					end case;

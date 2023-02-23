@@ -43,6 +43,7 @@ entity fpgachess_top is
 		clk : in std_logic;
 		ena_1khz : in std_logic;
 		ena_1sec : in std_logic;
+		reset : in std_logic;
 
 		cursor_up : in std_logic;
 		cursor_down : in std_logic;
@@ -75,6 +76,7 @@ architecture rtl of fpgachess_top is
 	signal vid_row : unsigned(2 downto 0);
 	signal vid_col : unsigned(2 downto 0);
 	signal vid_piece : piece_t;
+	signal vid_eval : signed(11 downto 0);
 
 	signal vid_move_show : unsigned(1 downto 0);
 	signal vid_move_ply : unsigned(ply_count_bits-1 downto 0);
@@ -97,7 +99,9 @@ begin
 
 				vid_col => vid_col,
 				vid_row => vid_row,
-				vid_piece => vid_piece
+				vid_piece => vid_piece,
+
+				vid_eval => vid_eval
 			);
 		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
 		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
@@ -107,6 +111,7 @@ begin
 		port map (
 			clk => clk,
 			ena_1khz => ena_1khz,
+			reset => reset,
 
 			cursor_up => cursor_up,
 			cursor_down => cursor_down,
@@ -160,6 +165,7 @@ begin
 		port map (
 			clk => clk,
 			ena_1sec => ena_1sec,
+			reset => reset,
 
 			white_top => white_top,
 
@@ -173,6 +179,8 @@ begin
 			vid_row => vid_row,
 			vid_col => vid_col,
 			piece => vid_piece,
+
+			vid_eval => vid_eval,
 
 			move_show => vid_move_show,
 			move_ply => vid_move_ply,

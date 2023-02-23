@@ -42,6 +42,7 @@ entity fpgachess_ui is
 	port (
 		clk : in std_logic;
 		ena_1khz : in std_logic;
+		reset : in std_logic;
 
 		cursor_up : in std_logic;
 		cursor_down : in std_logic;
@@ -210,6 +211,10 @@ begin
 					when others =>
 						null;
 					end case;
+				end if;
+
+				if reset = '1' then
+					new_game_trig_reg <= '1';
 				end if;
 			end if;
 		end process;
