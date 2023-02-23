@@ -40,6 +40,7 @@ use work.fpgachess_pkg.all;
 entity fpgachess_moves is
 	generic (
 		ply_count_bits : integer;
+		scroll_threshold : integer;
 		vid_line_start : integer;
 		vid_line_end : integer
 	);
@@ -52,7 +53,7 @@ entity fpgachess_moves is
 		move_to : in unsigned(5 downto 0);
 
 		vid_line : in unsigned(5 downto 0);
-		vid_move_show : out std_logic;
+		vid_move_show : out unsigned(1 downto 0);
 		vid_move_ply : out unsigned(ply_count_bits-1 downto 0);
 		vid_move_from : out unsigned(5 downto 0);
 		vid_move_to : out unsigned(5 downto 0)
@@ -67,7 +68,7 @@ architecture rtl of fpgachess_moves is
 	-- max_count_reg is one bit greater as ply result so ply<max compare also does work for last item in the storage
 	signal max_count_reg : unsigned(ply_count_bits downto 0) := (others => '0');
 
-	signal vid_move_show_reg : std_logic := '0';
+	signal vid_move_show_reg : unsigned(vid_move_show'range) := (others => '0');
 	signal vid_move_ply_reg : unsigned(vid_move_ply'range) := (others => '0');
 	signal vid_move_from_reg : unsigned(vid_move_from'range) := (others => '0');
 	signal vid_move_to_reg : unsigned(vid_move_to'range) := (others => '0');
@@ -80,16 +81,31 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
+			if new_game_trig = '1' then
+				max_count_reg <= (others => '0');
+			end if;
+			if store_move_trig = '1' then
+				max_count_reg <= max_count_reg + 1;
+			end if;
 		end if;
 	end process;
 
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			vid_move_show_reg <= '0';
+			vid_move_show_reg <= (others => '0');
+
 			if (vid_line >= vid_line_start) and (vid_line < vid_line_end) then
-				vid_move_show_reg <= '1';
-				vid_move_ply_reg <= resize(vid_line, ply_count_bits) - vid_line_start;
+				vid_move_ply_reg(vid_move_ply_reg'high downto 1) <= resize(vid_line, ply_count_bits-1) - vid_line_start;
+				vid_move_ply_reg(0) <= '0';
+			end if;
+			if vid_move_ply_reg < max_count_reg then
+				-- At least white made a turn in this move
+				vid_move_show_reg(0) <= '1';
+				if vid_move_ply_reg+1 < max_count_reg then
+					-- Black also made turn this move, so enable both bits
+					vid_move_show_reg(1) <= '1';
+				end if;
 			end if;
 		end if;
 	end process;

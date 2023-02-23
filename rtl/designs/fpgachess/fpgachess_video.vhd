@@ -60,7 +60,7 @@ entity fpgachess_video is
 		vid_col : out unsigned(2 downto 0);
 		piece : in piece_t;
 
-		move_show : in std_logic;
+		move_show : in unsigned(1 downto 0);
 		move_ply : in unsigned(ply_count_bits-1 downto 0);
 		move_from : in unsigned(5 downto 0);
 		move_to : in unsigned(5 downto 0);
@@ -242,36 +242,37 @@ begin
 		signal vga_matrix_reg : vid_stage_t;
 		signal current_char_reg : unsigned(7 downto 0);
 		signal move_ply_prev_reg : unsigned(move_ply'range) := (others => '0');
-		signal move_ply_convert_reg : unsigned(move_ply'high+1 downto 0) := (others => '0');
-		signal move_ply_100_reg : unsigned(7 downto 0) := (others => '0');
-		signal move_ply_10_reg : unsigned(7 downto 0) := (others => '0');
-		signal move_ply_1_reg : unsigned(7 downto 0) := (others => '0');
+		signal move_reg : unsigned(move_ply'range) := (others => '0');
+		signal move_100_reg : unsigned(7 downto 0) := (others => '0');
+		signal move_10_reg : unsigned(7 downto 0) := (others => '0');
+		signal move_1_reg : unsigned(7 downto 0) := (others => '0');
 	begin
 		vga_matrix <= vga_matrix_reg;
 		current_char <= current_char_reg;
 
-		-- Convert current ply from binary to decimal digits for display
+		-- Divide current ply by two to get moves and convert from binary to decimal digits for display
+		-- Also add one as ply is an index that starts at zero
 		process(clk)
 		begin
 			if rising_edge(clk) then
 				if move_ply /= move_ply_prev_reg then
 					move_ply_prev_reg <= move_ply;
-					move_ply_convert_reg <= ("0" & move_ply) + 1;
-					move_ply_100_reg <= X"30";
-					move_ply_10_reg <= X"30";
-					move_ply_1_reg <= X"30";
-				elsif move_ply_convert_reg > 99 then
-					move_ply_convert_reg <= move_ply_convert_reg - 100;
-					move_ply_100_reg(3 downto 0) <= move_ply_100_reg(3 downto 0) + 1;
-				elsif move_ply_convert_reg > 9 then
-					move_ply_convert_reg <= move_ply_convert_reg - 10;
-					move_ply_10_reg(3 downto 0) <= move_ply_10_reg(3 downto 0) + 1;
+					move_reg <= ("0" & move_ply(move_ply'high downto 1)) + 1;
+					move_100_reg <= X"30";
+					move_10_reg <= X"30";
+					move_1_reg <= X"30";
+				elsif move_reg > 99 then
+					move_reg <= move_reg - 100;
+					move_100_reg(3 downto 0) <= move_100_reg(3 downto 0) + 1;
+				elsif move_reg > 9 then
+					move_reg <= move_reg - 10;
+					move_10_reg(3 downto 0) <= move_10_reg(3 downto 0) + 1;
 				else
-					move_ply_1_reg(3 downto 0) <= move_ply_convert_reg(3 downto 0);
-					if move_ply_100_reg(3 downto 0) = 0 then
-						move_ply_100_reg(4) <= '0'; -- Space
-						if move_ply_10_reg(3 downto 0) = 0 then
-							move_ply_10_reg(4) <= '0'; -- Space
+					move_1_reg(3 downto 0) <= move_reg(3 downto 0);
+					if move_100_reg(3 downto 0) = 0 then
+						move_100_reg(4) <= '0'; -- Remove leading zeros by replacing it with space (clear bit 4 so 30h becomes 20h)
+						if move_10_reg(3 downto 0) = 0 then
+							move_10_reg(4) <= '0'; -- Remove leading zeros by replacing it with space (clear bit 4 so 30h becomes 20h)
 						end if;
 					end if;
 				end if;
@@ -286,17 +287,23 @@ begin
 				current_char_reg <= X"20";
 
 				-- Display move history on the right side of the screen
-				if move_show = '1' then
+				if move_show(0) = '1' then
 					case vga_coords.x(9 downto 3) is
-					when "1000110" => current_char_reg <= move_ply_100_reg;
-					when "1000111" => current_char_reg <= move_ply_10_reg;
-					when "1001000" => current_char_reg <= move_ply_1_reg;
+					when "1000000" => current_char_reg <= move_100_reg;
+					when "1000001" => current_char_reg <= move_10_reg;
+					when "1000010" => current_char_reg <= move_1_reg;
+					--   "1000011"
+					when "1000100" => current_char_reg <= X"65";
+					when "1000101" => current_char_reg <= X"31";
+					when "1000110" => current_char_reg <= X"2D";
+					when "1000111" => current_char_reg <= X"66";
+					when "1001000" => current_char_reg <= X"32";
 					--   "1001001"
-					when "1001010" => current_char_reg <= X"65";
-					when "1001011" => current_char_reg <= X"31";
-					when "1001100" => current_char_reg <= X"2D";
-					when "1001101" => current_char_reg <= X"66";
-					when "1001110" => current_char_reg <= X"32";
+					when "1001010" => if (move_show(1) = '1') then current_char_reg <= X"65"; end if;
+					when "1001011" => if (move_show(1) = '1') then current_char_reg <= X"31"; end if;
+					when "1001100" => if (move_show(1) = '1') then current_char_reg <= X"2D"; end if;
+					when "1001101" => if (move_show(1) = '1') then current_char_reg <= X"66"; end if;
+					when "1001110" => if (move_show(1) = '1') then current_char_reg <= X"32"; end if;
 					when others =>
 						null;
 					end case;

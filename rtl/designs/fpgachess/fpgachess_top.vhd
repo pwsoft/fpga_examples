@@ -76,7 +76,7 @@ architecture rtl of fpgachess_top is
 	signal vid_col : unsigned(2 downto 0);
 	signal vid_piece : piece_t;
 
-	signal vid_move_show : std_logic;
+	signal vid_move_show : unsigned(1 downto 0);
 	signal vid_move_ply : unsigned(ply_count_bits-1 downto 0);
 	signal vid_move_from : unsigned(5 downto 0);
 	signal vid_move_to : unsigned(5 downto 0);
@@ -131,6 +131,7 @@ begin
 		moves_inst : entity work.fpgachess_moves
 			generic map (
 				ply_count_bits => ply_count_bits,
+				scroll_threshold => 5,
 				vid_line_start => 1,
 				vid_line_end => 25
 			)
