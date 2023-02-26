@@ -49,6 +49,8 @@ entity fpgachess_video is
 		reset : in std_logic;
 
 		white_top : in std_logic;
+		show_undo : in std_logic;
+		show_redo : in std_logic;
 
 		cursor_row : in unsigned(2 downto 0);
 		cursor_col : in unsigned(3 downto 0);
@@ -423,7 +425,7 @@ begin
 					when "0110100" => if white_top = '0' then current_char_reg <= X"68"; else current_char_reg <= X"6C"; end if; -- h / l
 					when "0110101" => if white_top = '0' then current_char_reg <= X"69"; else current_char_reg <= X"61"; end if; -- i / a
 					when "0110110" => if white_top = '0' then current_char_reg <= X"74"; else current_char_reg <= X"63"; end if; -- t / c
-					when "0110111" => if white_top = '0' then current_char_reg <= X"65"; else current_char_reg <= X"6B"; end if; -- e / k					
+					when "0110111" => if white_top = '0' then current_char_reg <= X"65"; else current_char_reg <= X"6B"; end if; -- e / k
 					when others =>
 						null;
 					end case;
@@ -478,6 +480,15 @@ begin
 					when others =>
 						null;
 					end case;
+				when "10000" =>
+					case vga_coords.x(9 downto 3) is
+					when "0110010" => if show_undo = '1' then current_char_reg <= X"55"; end if; -- U
+					when "0110011" => if show_undo = '1' then current_char_reg <= X"6E"; end if; -- n
+					when "0110100" => if show_undo = '1' then current_char_reg <= X"64"; end if; -- d
+					when "0110101" => if show_undo = '1' then current_char_reg <= X"6F"; end if; -- o
+					when others =>
+						null;
+					end case;
 				when "10001" =>
 					case vga_coords.x(9 downto 4) is
 					when "000000" =>
@@ -487,6 +498,15 @@ begin
 						else
 							current_char_reg <= X"36";
 						end if;
+					when others =>
+						null;
+					end case;
+				when "10011" =>
+					case vga_coords.x(9 downto 3) is
+					when "0110010" => if show_redo = '1' then current_char_reg <= X"52"; end if; -- R
+					when "0110011" => if show_redo = '1' then current_char_reg <= X"65"; end if; -- e
+					when "0110100" => if show_redo = '1' then current_char_reg <= X"64"; end if; -- d
+					when "0110101" => if show_redo = '1' then current_char_reg <= X"6F"; end if; -- o
 					when others =>
 						null;
 					end case;

@@ -25,8 +25,8 @@
 --
 -- Part of FPGA-Chess
 -- Top level that glues the various building blocks together.
--- This is the entity to look at when porting the design to a different
--- platform.
+-- This is the entity to look at as first step, when porting the design to
+-- a different platform.
 --
 -- -----------------------------------------------------------------------
 
@@ -67,7 +67,16 @@ architecture rtl of fpgachess_top is
 	signal new_game_trig : std_logic;
 	signal white_top : std_logic;
 	signal move_trig : std_logic;
+	signal undo_trig : std_logic;
+	signal redo_trig : std_logic;
 	signal move_captured : piece_t;
+
+	signal undo_valid : std_logic;
+	signal undo_fromto : unsigned(11 downto 0);
+	signal undo_captured : piece_t;
+	signal redo_valid : std_logic;
+	signal redo_fromto : unsigned(11 downto 0);
+
 	signal cursor_row : unsigned(2 downto 0);
 	signal cursor_col : unsigned(3 downto 0);
 	signal cursor_select : std_logic;
@@ -98,6 +107,10 @@ begin
 				move_fromto => move_from & move_to,
 				move_captured => move_captured,
 
+				undo_trig => undo_trig,
+				undo_fromto => undo_fromto,
+				undo_captured => undo_captured,
+
 				vid_col => vid_col,
 				vid_row => vid_row,
 				vid_piece => vid_piece,
@@ -114,6 +127,9 @@ begin
 			ena_1khz => ena_1khz,
 			reset => reset,
 
+			undo_valid => undo_valid,
+			redo_valid => redo_valid,
+
 			cursor_up => cursor_up,
 			cursor_down => cursor_down,
 			cursor_left => cursor_left,
@@ -123,6 +139,9 @@ begin
 			new_game_trig => new_game_trig,
 			white_top => white_top,
 			move_trig => move_trig,
+			undo_trig => undo_trig,
+			redo_trig => redo_trig,
+
 			cursor_row => cursor_row,
 			cursor_col => cursor_col,
 			cursor_select => cursor_select,
@@ -130,11 +149,11 @@ begin
 			cursor_select_col => cursor_select_col
 		);
 
-	moves_blk : block
+	movelist_blk : block
 		signal move_from : unsigned(5 downto 0);
 		signal move_to : unsigned(5 downto 0);
 	begin
-		moves_inst : entity work.fpgachess_moves
+		movelist_inst : entity work.fpgachess_movelist
 			generic map (
 				ply_count_bits => ply_count_bits,
 				scroll_threshold => 5,
@@ -146,8 +165,17 @@ begin
 
 				new_game_trig => new_game_trig,
 				move_trig => move_trig,
+				undo_trig => undo_trig,
+				redo_trig => redo_trig,
+
 				move_fromto => move_from & move_to,
 				move_captured => move_captured,
+
+				undo_valid => undo_valid,
+				undo_fromto => undo_fromto,
+				undo_captured => undo_captured,
+				redo_valid => redo_valid,
+				redo_fromto => redo_fromto,
 
 				vid_line => vid_line,
 				vid_move_show => vid_move_show,
@@ -169,6 +197,8 @@ begin
 			reset => reset,
 
 			white_top => white_top,
+			show_undo => undo_valid,
+			show_redo => redo_valid,
 
 			cursor_row => cursor_row,
 			cursor_col => cursor_col,

@@ -45,6 +45,9 @@ entity fpgachess_board is
 		move_trig : in std_logic;
 		move_fromto : in unsigned(11 downto 0);
 		move_captured : out piece_t;
+		undo_trig : in std_logic;
+		undo_fromto : in unsigned(11 downto 0);
+		undo_captured : in piece_t;
 
 		vid_col : in unsigned(2 downto 0);
 		vid_row : in unsigned(2 downto 0);
@@ -85,6 +88,7 @@ architecture rtl of fpgachess_board is
 	signal move_piece_reg : piece_t := piece_empty;
 	signal move_captured_reg : piece_t := piece_empty;
 	signal move_phase2_reg : std_logic := '0';
+	signal undo_phase2_reg : std_logic := '0';
 	signal update_display_reg : std_logic := '0';
 begin
 	move_captured <= move_captured_reg;
@@ -135,6 +139,7 @@ begin
 	begin
 		if rising_edge(clk) then
 			move_phase2_reg <= '0';
+			undo_phase2_reg <= '0';
 			update_display_reg <= '0';
 
 			if new_game_trig = '1' then
@@ -150,14 +155,23 @@ begin
 				);
 				update_display_reg <= '1';
 			end if;
+			move_captured_reg <= eval_board_reg(to_integer(move_fromto(5 downto 0)));
 			if move_trig = '1' then
 				move_phase2_reg <= '1';
 				move_piece_reg <= eval_board_reg(to_integer(move_fromto(11 downto 6)));
-				move_captured_reg <= eval_board_reg(to_integer(move_fromto(5 downto 0)));
 			end if;
 			if move_phase2_reg = '1' then
 				eval_board_reg(to_integer(move_fromto(5 downto 0))) <= move_piece_reg;
 				eval_board_reg(to_integer(move_fromto(11 downto 6))) <= piece_empty;
+				update_display_reg <= '1';
+			end if;
+			if undo_trig = '1' then
+				undo_phase2_reg <= '1';
+				move_piece_reg <= eval_board_reg(to_integer(undo_fromto(5 downto 0)));
+			end if;
+			if undo_phase2_reg = '1' then
+				eval_board_reg(to_integer(undo_fromto(5 downto 0))) <= undo_captured;
+				eval_board_reg(to_integer(undo_fromto(11 downto 6))) <= move_piece_reg;
 				update_display_reg <= '1';
 			end if;
 		end if;

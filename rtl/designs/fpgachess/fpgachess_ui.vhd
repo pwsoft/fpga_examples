@@ -44,6 +44,9 @@ entity fpgachess_ui is
 		ena_1khz : in std_logic;
 		reset : in std_logic;
 
+		undo_valid : in std_logic;
+		redo_valid : in std_logic;
+
 		cursor_up : in std_logic;
 		cursor_down : in std_logic;
 		cursor_left : in std_logic;
@@ -53,6 +56,8 @@ entity fpgachess_ui is
 		new_game_trig : out std_logic;
 		white_top : out std_logic;
 		move_trig : out std_logic;
+		undo_trig : out std_logic;
+		redo_trig : out std_logic;
 
 		cursor_row : out unsigned(2 downto 0);
 		cursor_col : out unsigned(3 downto 0);
@@ -154,6 +159,8 @@ begin
 		signal new_game_trig_reg : std_logic := '0';
 		signal white_top_reg : std_logic := '0';
 		signal move_trig_reg : std_logic := '0';
+		signal undo_trig_reg : std_logic := '0';
+		signal redo_trig_reg : std_logic := '0';
 	begin
 		cursor_row <= cursor_row_reg;
 		cursor_col <= cursor_col_reg;
@@ -163,6 +170,8 @@ begin
 		white_top <= white_top_reg;
 		new_game_trig <= new_game_trig_reg;
 		move_trig <= move_trig_reg;
+		undo_trig <= undo_trig_reg;
+		redo_trig <= redo_trig_reg;
 
 		process(clk)
 		begin
@@ -179,9 +188,17 @@ begin
 				if (cursor_right_trig = '1') and (cursor_col_reg /= 8) then
 					cursor_col_reg <= cursor_col_reg + 1;
 				end if;
+			end if;
+		end process;
 
+		process(clk)
+		begin
+			if rising_edge(clk) then
 				new_game_trig_reg <= '0';
 				move_trig_reg <= '0';
+				undo_trig_reg <= '0';
+				redo_trig_reg <= '0';
+
 				if (cursor_enter_trig = '1') then
 					if cursor_col_reg(3) = '0' then
 						-- Select piece within board
@@ -206,6 +223,10 @@ begin
 					case cursor_row_reg & cursor_col_reg is
 					when "0001000" => -- New game
 						new_game_trig_reg <= '1';
+					when "1011000" => -- Undo
+						undo_trig_reg <= undo_valid;
+					when "1101000" => -- Redo
+						redo_trig_reg <= redo_valid;
 					when "1111000" => -- Board flip
 						white_top_reg <= not white_top_reg;
 					when others =>
