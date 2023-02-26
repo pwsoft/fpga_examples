@@ -43,8 +43,8 @@ entity fpgachess_board is
 		new_game_trig : in std_logic;
 
 		move_trig : in std_logic;
-		move_from : in unsigned(5 downto 0);
-		move_to : in unsigned(5 downto 0);
+		move_fromto : in unsigned(11 downto 0);
+		move_captured : out piece_t;
 
 		vid_col : in unsigned(2 downto 0);
 		vid_row : in unsigned(2 downto 0);
@@ -83,9 +83,11 @@ architecture rtl of fpgachess_board is
 	signal eval_sum_reg : signed(eval_sum_bits-1 downto 0) := (others => '0');
 
 	signal move_piece_reg : piece_t := piece_empty;
+	signal move_captured_reg : piece_t := piece_empty;
 	signal move_phase2_reg : std_logic := '0';
 	signal update_display_reg : std_logic := '0';
 begin
+	move_captured <= move_captured_reg;
 	vid_piece <= vid_piece_reg;
 	vid_eval <= eval_sum_reg;
 
@@ -150,11 +152,12 @@ begin
 			end if;
 			if move_trig = '1' then
 				move_phase2_reg <= '1';
-				move_piece_reg <= eval_board_reg(to_integer(move_from));
+				move_piece_reg <= eval_board_reg(to_integer(move_fromto(11 downto 6)));
+				move_captured_reg <= eval_board_reg(to_integer(move_fromto(5 downto 0)));
 			end if;
 			if move_phase2_reg = '1' then
-				eval_board_reg(to_integer(move_to)) <= move_piece_reg;
-				eval_board_reg(to_integer(move_from)) <= piece_empty;
+				eval_board_reg(to_integer(move_fromto(5 downto 0))) <= move_piece_reg;
+				eval_board_reg(to_integer(move_fromto(11 downto 6))) <= piece_empty;
 				update_display_reg <= '1';
 			end if;
 		end if;

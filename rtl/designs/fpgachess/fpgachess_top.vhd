@@ -67,6 +67,7 @@ architecture rtl of fpgachess_top is
 	signal new_game_trig : std_logic;
 	signal white_top : std_logic;
 	signal move_trig : std_logic;
+	signal move_captured : piece_t;
 	signal cursor_row : unsigned(2 downto 0);
 	signal cursor_col : unsigned(3 downto 0);
 	signal cursor_select : std_logic;
@@ -94,8 +95,8 @@ begin
 				new_game_trig => new_game_trig,
 
 				move_trig => move_trig,
-				move_from => move_from,
-				move_to => move_to,
+				move_fromto => move_from & move_to,
+				move_captured => move_captured,
 
 				vid_col => vid_col,
 				vid_row => vid_row,
@@ -132,7 +133,6 @@ begin
 	moves_blk : block
 		signal move_from : unsigned(5 downto 0);
 		signal move_to : unsigned(5 downto 0);
-		signal move_captured : piece_t;
 	begin
 		moves_inst : entity work.fpgachess_moves
 			generic map (
@@ -157,7 +157,6 @@ begin
 			);
 		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
 		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
-		move_captured <= piece_empty; -- TODO
 	end block;
 
 	video_inst : entity work.fpgachess_video
