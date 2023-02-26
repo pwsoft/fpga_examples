@@ -26,7 +26,7 @@ set_global_assignment -name VHDL_FILE $ownpath/pll50/pll50.vhd
 
 # FPGACHESS specific enties
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_board.vhd
-set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_moves.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_movelist.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_pkg.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_top.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_ui.vhd
