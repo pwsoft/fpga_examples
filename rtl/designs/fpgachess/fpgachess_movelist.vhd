@@ -217,13 +217,14 @@ begin
 			if (vid_line >= vid_line_start) and (vid_line < vid_line_end) then
 				vid_move_ply_reg(vid_move_ply_reg'high downto 1) <= resize(vid_line, ply_count_bits-1) - vid_line_start;
 				vid_move_ply_reg(0) <= '0';
-			end if;
-			if vid_move_ply_reg < max_count_reg then
-				-- At least white made a turn in this move
-				vid_move_show_reg(0) <= '1';
-				if vid_move_ply_reg < max_count_reg-1 then
-					-- Black also made turn this move, so enable both bits
-					vid_move_show_reg(1) <= '1';
+
+				if vid_move_ply_reg < max_count_reg then
+					-- At least white made a turn in this move
+					vid_move_show_reg(0) <= '1';
+					if vid_move_ply_reg < max_count_reg-1 then
+						-- Black also made turn this move, so enable both bits
+						vid_move_show_reg(1) <= '1';
+					end if;
 				end if;
 			end if;
 		end if;
