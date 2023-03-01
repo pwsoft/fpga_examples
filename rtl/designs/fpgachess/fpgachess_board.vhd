@@ -27,11 +27,16 @@
 -- Keeps track of the board state
 --
 -- -----------------------------------------------------------------------
+-- clk       - System clock input
+--
+-- vid_row   - Board row currently displayed by the video subsystem
+-- vid_col   - Board column currently displayed by the video subsystem
+-- vid_piece - Returns piece located on cell pointed to by vid_row and vid_col
+-- -----------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.video_pkg.all;
 use work.fpgachess_pkg.all;
 
 -- -----------------------------------------------------------------------
@@ -49,8 +54,15 @@ entity fpgachess_board is
 		undo_fromto : in unsigned(11 downto 0);
 		undo_captured : in piece_t;
 
-		vid_col : in unsigned(2 downto 0);
+		search_trig : in std_logic;
+		search_color : in std_logic;
+		search_fromto : in unsigned(11 downto 0);
+		search_valid : out std_logic;
+		search_done : out std_logic;
+		search_next : out unsigned(11 downto 0);
+
 		vid_row : in unsigned(2 downto 0);
+		vid_col : in unsigned(2 downto 0);
 		vid_piece : out piece_t;
 
 		vid_eval : out signed(11 downto 0)
@@ -66,26 +78,27 @@ architecture rtl of fpgachess_board is
 	signal vid_piece_reg : piece_t := (others => '0');
 
 	type board_t is array(0 to 63) of piece_t;
+	type extboard_t is array(0 to 63) of extpiece_t;
 	type eval_cells_t is array(0 to 63) of signed(eval_part_bits-1 downto 0);
 	type eval_sum_t is array(0 to 7) of signed(eval_sum_bits-1 downto 0);
 
-	constant init_board : board_t :=  (
-			piece_white & piece_rook, piece_white & piece_knight, piece_white & piece_bishop, piece_white & piece_queen, piece_white & piece_king, piece_white & piece_bishop, piece_white & piece_knight, piece_white & piece_rook,
-			piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn,
-			piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-			piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-			piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-			piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-			piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn,
-			piece_black & piece_rook, piece_black & piece_knight, piece_black & piece_bishop, piece_black & piece_queen, piece_black & piece_king, piece_black & piece_bishop, piece_black & piece_knight, piece_black & piece_rook
+	constant init_board : extboard_t :=  (
+			ext_wrook, ext_wknight, ext_wbishop, ext_wqueen, ext_wking, ext_wbishop, ext_wknight, ext_wrook,
+			ext_wpawn, ext_wpawn, ext_wpawn, ext_wpawn, ext_wpawn, ext_wpawn, ext_wpawn, ext_wpawn,
+			ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty,
+			ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty,
+			ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty,
+			ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty, ext_empty,
+			ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn,
+			ext_brook, ext_bknight, ext_bbishop, ext_bqueen, ext_bking, ext_bbishop, ext_bknight, ext_brook
 		);
-	signal display_board_reg : board_t := init_board;
-	signal eval_board_reg : board_t := init_board;
+	signal display_board_reg : board_t := (others => piece_empty);
+	signal eval_board_reg : extboard_t := init_board;
 	signal eval_cells_reg : eval_cells_t := (others => (others => '0'));
 	signal eval_row_sum_reg : eval_sum_t := (others => (others => '0'));
 	signal eval_sum_reg : signed(eval_sum_bits-1 downto 0) := (others => '0');
 
-	signal move_piece_reg : piece_t := piece_empty;
+	signal move_piece_reg : extpiece_t := ext_empty;
 	signal move_captured_reg : piece_t := piece_empty;
 	signal move_phase2_reg : std_logic := '0';
 	signal undo_phase2_reg : std_logic := '0';
@@ -125,7 +138,7 @@ begin
 				wpawn_in_file_reg <= (others => '0');
 				bpawn_in_file_reg <= (others => '0');
 				for cell in 0 to 63 loop
-					case eval_board_reg(cell) is
+					case to_piece(eval_board_reg(cell)) is
 					when piece_white & piece_pawn =>
 						eval_cells_reg(cell) <= to_signed(10, eval_part_bits);
 						wpawn_in_file_reg(cell mod 8) <= '1';
@@ -175,19 +188,10 @@ begin
 			update_display_reg <= '0';
 
 			if new_game_trig = '1' then
-				eval_board_reg <= (
-					piece_white & piece_rook, piece_white & piece_knight, piece_white & piece_bishop, piece_white & piece_queen, piece_white & piece_king, piece_white & piece_bishop, piece_white & piece_knight, piece_white & piece_rook,
-					piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn, piece_white & piece_pawn,
-					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-					piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none, piece_white & piece_none,
-					piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn, piece_black & piece_pawn,
-					piece_black & piece_rook, piece_black & piece_knight, piece_black & piece_bishop, piece_black & piece_queen, piece_black & piece_king, piece_black & piece_bishop, piece_black & piece_knight, piece_black & piece_rook
-				);
+				eval_board_reg <= init_board;
 				update_display_reg <= '1';
 			end if;
-			move_captured_reg <= eval_board_reg(to_integer(move_fromto(5 downto 0)));
+			move_captured_reg <= to_piece(eval_board_reg(to_integer(move_fromto(5 downto 0))));
 			if move_trig = '1' then
 				move_phase2_reg <= '1';
 				move_piece_reg <= eval_board_reg(to_integer(move_fromto(11 downto 6)));
@@ -202,12 +206,79 @@ begin
 				move_piece_reg <= eval_board_reg(to_integer(undo_fromto(5 downto 0)));
 			end if;
 			if undo_phase2_reg = '1' then
-				eval_board_reg(to_integer(undo_fromto(5 downto 0))) <= undo_captured;
+				eval_board_reg(to_integer(undo_fromto(5 downto 0))) <= to_extpiece(undo_captured);
 				eval_board_reg(to_integer(undo_fromto(11 downto 6))) <= move_piece_reg;
 				update_display_reg <= '1';
 			end if;
 		end if;
 	end process;
+
+	search_blk : block
+		signal search_first_reg : std_logic := '0';
+		signal search_check_reg : std_logic := '0';
+		signal search_valid_reg : std_logic := '0';
+		signal search_done_reg : std_logic := '0';
+		signal search_next_reg : unsigned(search_next'range) := (others => '0');
+	begin
+		process(clk)
+			variable cell : integer range 0 to 63;
+		begin
+			search_valid <= search_valid_reg;
+			search_done <= search_done_reg;
+			search_next <= search_next_reg;
+
+			if rising_edge(clk) then
+				search_first_reg <= '0';
+
+				if search_first_reg = '1' then
+					if search_next_reg(11 downto 6) /= 63 then
+						search_check_reg <= '1';
+						search_next_reg(11 downto 6) <= search_fromto(11 downto 6) + 1;
+						search_next_reg(5 downto 0) <= (others => '0');
+					else
+						search_valid_reg <= '1';
+						search_done_reg <= '1';
+					end if;
+				end if;
+
+				if search_check_reg = '1' then
+					for row in 0 to 7 loop
+						for col in 0 to 7 loop
+							cell := row*8+col;
+							if to_integer(search_next_reg(11 downto 6)) = cell then
+								if ((search_color = '0') and (eval_board_reg(cell)(4) = '0'))
+								or ((search_color = '1') and (eval_board_reg(cell)(3) = '0')) then
+									-- No matching piece when searching
+									report Integer'image(cell);
+									if cell = 63 then
+										report "Cell 63";
+										search_valid_reg <= '1';
+										search_done_reg <= '1';
+										search_check_reg <= '0';
+									else
+										-- Next cell
+										search_next_reg(11 downto 6) <= search_next_reg(11 downto 6) + 1;
+										search_next_reg(5 downto 0) <= (others => '0');
+									end if;
+								else
+									-- TODO For now only check cell itself. Need check individual piece types later
+									search_valid_reg <= '1';
+									search_check_reg <= '0';
+								end if;
+							end if;
+						end loop;
+					end loop;
+				end if;
+
+				if search_trig = '1' then
+					search_valid_reg <= '0';
+					search_done_reg <= '0';
+					search_first_reg <= '1';
+					search_next_reg <= search_fromto;
+				end if;
+			end if;
+		end process;
+	end block;
 
 	display_blk : block
 		signal display_col0_reg : piece_t := piece_empty;
@@ -224,7 +295,7 @@ begin
 			if rising_edge(clk) then
 				if update_display_reg = '1' then
 					for i in 0 to 63 loop
-						display_board_reg(i) <= eval_board_reg(i);
+						display_board_reg(i) <= to_piece(eval_board_reg(i));
 					end loop;
 				end if;
 			end if;
@@ -256,7 +327,7 @@ begin
 				when "100" => vid_piece_reg <= display_col4_reg;
 				when "101" => vid_piece_reg <= display_col5_reg;
 				when "110" => vid_piece_reg <= display_col6_reg;
-				when "111" => vid_piece_reg <= display_col7_reg;
+				when others => vid_piece_reg <= display_col7_reg;
 				end case;
 			end if;
 		end process;

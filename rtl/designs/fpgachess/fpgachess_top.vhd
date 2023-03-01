@@ -111,6 +111,10 @@ begin
 				undo_fromto => undo_fromto,
 				undo_captured => undo_captured,
 
+				search_trig => '0',
+				search_color => '0',
+				search_fromto => (others => '0'),
+
 				vid_col => vid_col,
 				vid_row => vid_row,
 				vid_piece => vid_piece,
