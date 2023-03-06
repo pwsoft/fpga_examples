@@ -57,9 +57,9 @@ entity fpgachess_board is
 		search_trig : in std_logic;
 		search_color : in std_logic;
 		search_fromto : in unsigned(11 downto 0);
-		search_valid : out std_logic;
-		search_done : out std_logic;
-		search_next : out unsigned(11 downto 0);
+		found_valid : out std_logic;
+		found_done : out std_logic;
+		found_fromto : out unsigned(11 downto 0);
 
 		vid_row : in unsigned(2 downto 0);
 		vid_col : in unsigned(2 downto 0);
@@ -214,67 +214,131 @@ begin
 	end process;
 
 	search_blk : block
-		signal search_first_reg : std_logic := '0';
+		signal found_valid_reg : std_logic := '0';
+		signal search_fetch_reg : std_logic := '0';
 		signal search_check_reg : std_logic := '0';
-		signal search_valid_reg : std_logic := '0';
-		signal search_done_reg : std_logic := '0';
-		signal search_next_reg : unsigned(search_next'range) := (others => '0');
+		signal search_piece_reg : extpiece_t := ext_empty;
+
+		signal search_from_reg : unsigned(6 downto 0) := (others => '0');
+		signal search_to_reg : unsigned(5 downto 0) := (others => '0');
+		signal search_from_incr : unsigned(6 downto 0);
 	begin
+		search_from_incr <= search_from_reg + 1;
+		found_valid <= found_valid_reg;
+		found_done <= search_from_reg(6);
+		found_fromto <= search_from_reg(5 downto 0) & search_to_reg;
+
 		process(clk)
+			variable valid : std_logic;
+			variable skip : std_logic;
+			variable row : integer range 0 to 7;
 			variable cell : integer range 0 to 63;
+			variable dest : integer range 0 to 63;
 		begin
-			search_valid <= search_valid_reg;
-			search_done <= search_done_reg;
-			search_next <= search_next_reg;
-
 			if rising_edge(clk) then
-				search_first_reg <= '0';
-
-				if search_first_reg = '1' then
-					if search_next_reg(11 downto 6) /= 63 then
-						search_check_reg <= '1';
-						search_next_reg(11 downto 6) <= search_fromto(11 downto 6) + 1;
-						search_next_reg(5 downto 0) <= (others => '0');
-					else
-						search_valid_reg <= '1';
-						search_done_reg <= '1';
-					end if;
+				if search_from_reg(6) = '1' then
+					-- Searched every cell
+					found_valid_reg <= '1';
+					search_fetch_reg <= '0';
+					search_check_reg <= '0';
+				elsif search_fetch_reg = '1' then
+					search_fetch_reg <= '0';
+					search_check_reg <= '1';
+					search_piece_reg <= eval_board_reg(to_integer(search_from_reg(5 downto 0)));
 				end if;
 
 				if search_check_reg = '1' then
-					for row in 0 to 7 loop
-						for col in 0 to 7 loop
-							cell := row*8+col;
-							if to_integer(search_next_reg(11 downto 6)) = cell then
-								if ((search_color = '0') and (eval_board_reg(cell)(4) = '0'))
-								or ((search_color = '1') and (eval_board_reg(cell)(3) = '0')) then
-									-- No matching piece when searching
-									report Integer'image(cell);
-									if cell = 63 then
-										report "Cell 63";
-										search_valid_reg <= '1';
-										search_done_reg <= '1';
-										search_check_reg <= '0';
-									else
-										-- Next cell
-										search_next_reg(11 downto 6) <= search_next_reg(11 downto 6) + 1;
-										search_next_reg(5 downto 0) <= (others => '0');
-									end if;
-								else
-									-- TODO For now only check cell itself. Need check individual piece types later
-									search_valid_reg <= '1';
-									search_check_reg <= '0';
+					valid := '0';
+					skip := '0';
+					row := to_integer(search_from_reg(5 downto 3));
+					cell := to_integer(search_from_reg(5 downto 0));
+
+					search_check_reg <= '0';
+					if ((search_color = '0') and (search_piece_reg(4) = '0'))
+					or ((search_color = '1') and (search_piece_reg(3) = '0')) then
+						-- Cell doesn't have piece of matching color, so search next
+						skip := '1';
+					else
+						case search_piece_reg(3 downto 0) is
+						when piece_white & piece_pawn =>
+							if search_to_reg = search_from_reg then
+								-- Move forward once
+								dest := cell+8;
+								if eval_board_reg(dest)(4 downto 3) = "00" then
+									valid := '1';
 								end if;
+							elsif search_to_reg = cell+8 then
+								-- Capture left
+								dest := cell+7;
+								if eval_board_reg(dest)(4 downto 3) = "01" then
+									valid := '1';
+								end if;
+							elsif search_to_reg = cell+7 then
+								-- Capture right
+								dest := cell+9;
+								if eval_board_reg(dest)(4 downto 3) = "01" then
+									valid := '1';
+								end if;
+							elsif (search_to_reg = cell+9) and (row = 1) then
+								-- Two spaces forward on row one
+								dest := cell+16;
+								if (eval_board_reg(cell+8)(4 downto 3) = "00") and (eval_board_reg(dest)(4 downto 3) = "00") then
+									valid := '1';
+								end if;
+							else
+								skip := '1';
 							end if;
-						end loop;
-					end loop;
+						when piece_black & piece_pawn =>
+							if search_to_reg = search_from_reg then
+								-- Move forward once
+								dest := cell-8;
+								if eval_board_reg(dest)(4 downto 3) = "00" then
+									valid := '1';
+								end if;
+							elsif search_to_reg = cell-8 then
+								-- Capture right
+								dest := cell-7;
+								if eval_board_reg(dest)(4 downto 3) = "10" then
+									valid := '1';
+								end if;
+							elsif search_to_reg = cell-7 then
+								-- Capture left
+								dest := cell-9;
+								if eval_board_reg(dest)(4 downto 3) = "10" then
+									valid := '1';
+								end if;
+							elsif (search_to_reg = cell-9) and (row = 6) then
+								-- Two spaces forward on row six
+								dest := cell-16;
+								if (eval_board_reg(cell-8)(4 downto 3) = "00") and (eval_board_reg(dest)(4 downto 3) = "00") then
+									valid := '1';
+								end if;
+							else
+								skip := '1';
+							end if;
+						when others =>
+							skip := '1';
+						end case;
+					end if;
+
+					search_to_reg <= to_unsigned(dest, 6);
+					if valid = '1' then
+						found_valid_reg <= '1';
+					else
+						search_fetch_reg <= '1';
+					end if;
+					if skip = '1' then
+						search_from_reg <= search_from_incr;
+						search_to_reg <= search_from_incr(5 downto 0);
+					end if;
 				end if;
 
 				if search_trig = '1' then
-					search_valid_reg <= '0';
-					search_done_reg <= '0';
-					search_first_reg <= '1';
-					search_next_reg <= search_fromto;
+					found_valid_reg <= '0';
+					search_fetch_reg <= '1';
+					search_check_reg <= '0';
+					search_from_reg <= "0" & search_fromto(11 downto 6);
+					search_to_reg <= search_fromto(5 downto 0);
 				end if;
 			end if;
 		end process;

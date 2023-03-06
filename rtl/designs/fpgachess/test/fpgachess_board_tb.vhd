@@ -60,9 +60,9 @@ architecture tb of fpgachess_board_tb is
 			(others => '0')
 		);
 
-	signal search_valid : std_logic;
-	signal search_done : std_logic;
-	signal search_next : unsigned(11 downto 0);
+	signal found_valid : std_logic;
+	signal found_done : std_logic;
+	signal found_fromto : unsigned(11 downto 0);
 
 	procedure waitclk is
 	begin
@@ -80,17 +80,17 @@ architecture tb of fpgachess_board_tb is
 		waitclk;
 	end procedure;
 
-	procedure wait_search_valid is
+	procedure wait_found_valid is
 		variable timeout : integer := 0;
 	begin
 		timeout := 0;
-		while (search_valid = '0') and (timeout < 128) loop
+		while (found_valid = '0') and (timeout < 128) loop
 			waitclk;
 			timeout := timeout + 1;
 			assert(timeout < 128) report "Search next has taken too long";
 		end loop;
-		if search_done = '0' then
-			report "Found next move " & tohex(search_next);
+		if found_done = '0' then
+			report "Found next move from " & tohex("00" & found_fromto(11 downto 6)) & " to " & tohex("00" & found_fromto(5 downto 0));
 		else
 			report "Search done";
 		end if;
@@ -119,11 +119,11 @@ architecture tb of fpgachess_board_tb is
 		t.search_color <= color;
 		t.search_fromto <= (others => '0');
 		search_trig(t);
-		wait_search_valid;
-		while (search_valid = '1') and (search_done = '0') loop
-			t.search_fromto <= search_next;
+		wait_found_valid;
+		while (found_valid = '1') and (found_done = '0') loop
+			t.search_fromto <= found_fromto;
 			search_trig(t);
-			wait_search_valid;
+			wait_found_valid;
 		end loop;
 	end procedure;
 begin
@@ -145,9 +145,9 @@ begin
 			search_trig => t.search_trig,
 			search_color => t.search_color,
 			search_fromto => t.search_fromto,
-			search_valid => search_valid,
-			search_done => search_done,
-			search_next => search_next,
+			found_valid => found_valid,
+			found_done => found_done,
+			found_fromto => found_fromto,
 
 			vid_row => "000",
 			vid_col => "000",
