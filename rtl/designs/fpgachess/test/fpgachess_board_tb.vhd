@@ -48,7 +48,7 @@ architecture tb of fpgachess_board_tb is
 	signal eval : signed(11 downto 0);
 	type test_t is record
 			name : string(1 to 16);
-			search_trig : std_logic;
+			search_req : std_logic;
 			search_color : std_logic;
 			search_fromto : unsigned(11 downto 0);
 		end record;
@@ -60,7 +60,7 @@ architecture tb of fpgachess_board_tb is
 			(others => '0')
 		);
 
-	signal found_valid : std_logic;
+	signal search_ack : std_logic;
 	signal found_done : std_logic;
 	signal found_fromto : unsigned(11 downto 0);
 
@@ -80,11 +80,11 @@ architecture tb of fpgachess_board_tb is
 		waitclk;
 	end procedure;
 
-	procedure wait_found_valid is
+	procedure wait_ack(signal t : inout test_t) is
 		variable timeout : integer := 0;
 	begin
 		timeout := 0;
-		while (found_valid = '0') and (timeout < 128) loop
+		while (t.search_req /= search_ack) and (timeout < 128) loop
 			waitclk;
 			timeout := timeout + 1;
 			assert(timeout < 128) report "Search next has taken too long";
@@ -98,9 +98,7 @@ architecture tb of fpgachess_board_tb is
 
 	procedure search_trig(signal t : inout test_t) is
 	begin
-		t.search_trig <= '1';
-		waitclk;
-		t.search_trig <= '0';
+		t.search_req <= not t.search_req;
 		waitclk;
 	end procedure;
 
@@ -119,11 +117,11 @@ architecture tb of fpgachess_board_tb is
 		t.search_color <= color;
 		t.search_fromto <= (others => '0');
 		search_trig(t);
-		wait_found_valid;
-		while (found_valid = '1') and (found_done = '0') loop
+		wait_ack(t);
+		while (t.search_req = search_ack) and (found_done = '0') loop
 			t.search_fromto <= found_fromto;
 			search_trig(t);
-			wait_found_valid;
+			wait_ack(t);
 		end loop;
 	end procedure;
 begin
@@ -137,15 +135,14 @@ begin
 
 			move_trig => '0',
 			move_fromto => (others => '0'),
-			move_captured => open,
 			undo_trig => '0',
 			undo_fromto => (others => '0'),
 			undo_captured => piece_empty,
 
-			search_trig => t.search_trig,
+			search_req => t.search_req,
+			search_ack => search_ack,
 			search_color => t.search_color,
 			search_fromto => t.search_fromto,
-			found_valid => found_valid,
 			found_done => found_done,
 			found_fromto => found_fromto,
 

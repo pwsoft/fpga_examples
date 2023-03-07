@@ -71,10 +71,10 @@ entity fpgachess_search is
 		search_abort_trig : in std_logic;
 
 		searching : out std_logic;
-		search_trig : out std_logic;
+		search_req : out std_logic;
+		search_ack : in std_logic;
 		search_color : out std_logic;
 		search_fromto : out unsigned(11 downto 0);
-		found_valid : in std_logic;
 		found_done : in std_logic;
 		found_fromto : in unsigned(11 downto 0);
 
@@ -89,7 +89,7 @@ architecture rtl of fpgachess_search is
 	type state_t is (IDLE, SEARCH);
 
 	signal searching_reg : std_logic := '0';
-	signal search_trig_reg : std_logic := '0';
+	signal search_req_reg : std_logic := '0';
 	signal search_color_reg : std_logic := '0';
 	signal search_fromto_reg : unsigned(search_fromto'range) := (others => '0');
 
@@ -97,7 +97,7 @@ architecture rtl of fpgachess_search is
 	signal move_fromto_reg : unsigned(move_fromto'range) := (others => '0');
 begin
 	searching <= searching_reg;
-	search_trig <= search_trig_reg;
+	search_req <= search_req_reg;
 	search_color <= search_color_reg;
 	search_fromto <= search_fromto_reg;
 
@@ -107,15 +107,14 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			search_trig_reg <= '0';
 			move_trig_reg <= '0';
 			if search_start_trig = '1' then
 				searching_reg <= '1';
+				search_req_reg <= not search_req_reg;
 				search_color_reg <= search_start_color;
-				search_trig_reg <= '1';
 				search_fromto_reg <= (others => '0');
 			end if;
-			if (searching_reg = '1') and (found_valid = '1') then
+			if (searching_reg = '1') and (search_req_reg = search_ack) then
 				searching_reg <= '0';
 				if (found_done = '0') then
 					move_trig_reg <= '1';

@@ -84,10 +84,10 @@ architecture rtl of fpgachess_top is
 	signal redo_fromto : unsigned(11 downto 0);
 
 	signal searching : std_logic;
-	signal search_trig : std_logic;
+	signal search_req : std_logic;
+	signal search_ack : std_logic;
 	signal search_color : std_logic;
 	signal search_fromto : unsigned(11 downto 0);
-	signal found_valid : std_logic;
 	signal found_done : std_logic;
 	signal found_fromto : unsigned(11 downto 0);
 
@@ -128,10 +128,10 @@ begin
 				undo_fromto => undo_fromto,
 				undo_captured => undo_captured,
 
-				search_trig => search_trig,
+				search_req => search_req,
+				search_ack => search_ack,
 				search_color => search_color,
 				search_fromto => search_fromto,
-				found_valid => found_valid,
 				found_done => found_done,
 				found_fromto => found_fromto,
 
@@ -169,10 +169,10 @@ begin
 			search_abort_trig => '0',
 
 			searching => searching,
-			search_trig => search_trig,
+			search_req => search_req,
+			search_ack => search_ack,
 			search_color => search_color,
 			search_fromto => search_fromto,
-			found_valid => found_valid,
 			found_done => found_done,
 			found_fromto => found_fromto,
 

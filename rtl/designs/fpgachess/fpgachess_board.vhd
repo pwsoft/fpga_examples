@@ -29,11 +29,11 @@
 -- -----------------------------------------------------------------------
 -- clk             - System clock input
 --
--- search_trig     - Start a move search on the board
+-- search_req      - Toggle to start a move search on the board
+-- search_ack      - Toggles when a search is complete
 -- search_color    - Color to use when searching a move on the board
 -- search_fromto   - Starting point when searching a move on the board
--- found_valid     - High when board search is complete and results are valid
--- found_done      - High when no new move has been found on the board
+-- found_done      - High when no new move have been found on the board
 -- found_fromto    - Coordinate and target of the found move on the board
 --
 -- vid_row   - Board row currently displayed by the video subsystem
@@ -61,7 +61,8 @@ entity fpgachess_board is
 		undo_fromto : in unsigned(11 downto 0);
 		undo_captured : in piece_t;
 
-		search_trig : in std_logic;
+		search_req : in std_logic;
+		search_ack : out std_logic;
 		search_color : in std_logic;
 		search_fromto : in unsigned(11 downto 0);
 		found_valid : out std_logic;
@@ -241,6 +242,8 @@ begin
 	end block;
 
 	search_blk : block
+		signal search_req_reg : std_logic := '0';
+		signal search_ack_reg : std_logic := '0';
 		signal found_valid_reg : std_logic := '0';
 		signal search_fetch_reg : std_logic := '0';
 		signal search_check_reg : std_logic := '0';
@@ -250,6 +253,7 @@ begin
 		signal search_to_reg : unsigned(5 downto 0) := (others => '0');
 		signal search_from_incr : unsigned(6 downto 0);
 	begin
+		search_ack <= search_ack_reg;
 		search_from_incr <= search_from_reg + 1;
 		found_valid <= found_valid_reg;
 		found_done <= search_from_reg(6);
@@ -266,6 +270,7 @@ begin
 			if rising_edge(clk) then
 				if search_from_reg(6) = '1' then
 					-- Searched every cell
+					search_ack_reg <= search_req_reg;
 					found_valid_reg <= '1';
 					search_fetch_reg <= '0';
 					search_check_reg <= '0';
@@ -353,7 +358,7 @@ begin
 
 					search_to_reg <= to_unsigned(dest, 6);
 					if valid = '1' then
-						found_valid_reg <= '1';
+						search_ack_reg <= search_req_reg;
 					else
 						search_fetch_reg <= '1';
 					end if;
@@ -363,7 +368,8 @@ begin
 					end if;
 				end if;
 
-				if search_trig = '1' then
+				if search_req /= search_req_reg then
+					search_req_reg <= search_req;
 					found_valid_reg <= '0';
 					search_fetch_reg <= '1';
 					search_check_reg <= '0';
