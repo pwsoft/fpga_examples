@@ -54,6 +54,7 @@ entity fpgachess_ui is
 		cursor_enter : in std_logic;
 
 		new_game_trig : out std_logic;
+		search_start_trig : out std_logic;
 		white_top : out std_logic;
 		move_trig : out std_logic;
 		undo_trig : out std_logic;
@@ -157,6 +158,7 @@ begin
 		signal select_col_reg : unsigned(2 downto 0) := (others => '0');
 		signal select_reg : std_logic := '0';
 		signal new_game_trig_reg : std_logic := '0';
+		signal search_start_trig_reg : std_logic := '0';
 		signal white_top_reg : std_logic := '0';
 		signal move_trig_reg : std_logic := '0';
 		signal undo_trig_reg : std_logic := '0';
@@ -169,6 +171,7 @@ begin
 		cursor_select_col <= select_col_reg;
 		white_top <= white_top_reg;
 		new_game_trig <= new_game_trig_reg;
+		search_start_trig <= search_start_trig_reg;
 		move_trig <= move_trig_reg;
 		undo_trig <= undo_trig_reg;
 		redo_trig <= redo_trig_reg;
@@ -195,6 +198,7 @@ begin
 		begin
 			if rising_edge(clk) then
 				new_game_trig_reg <= '0';
+				search_start_trig_reg <= '0';
 				move_trig_reg <= '0';
 				undo_trig_reg <= '0';
 				redo_trig_reg <= '0';
@@ -223,6 +227,8 @@ begin
 					case cursor_row_reg & cursor_col_reg is
 					when "0001000" => -- New game
 						new_game_trig_reg <= '1';
+					when "0011000" => -- TBD trigger search
+						search_start_trig_reg <= '1';
 					when "1011000" => -- Undo
 						undo_trig_reg <= undo_valid;
 					when "1101000" => -- Redo

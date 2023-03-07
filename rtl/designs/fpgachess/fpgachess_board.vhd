@@ -27,7 +27,14 @@
 -- Keeps track of the board state
 --
 -- -----------------------------------------------------------------------
--- clk       - System clock input
+-- clk             - System clock input
+--
+-- search_trig     - Start a move search on the board
+-- search_color    - Color to use when searching a move on the board
+-- search_fromto   - Starting point when searching a move on the board
+-- found_valid     - High when board search is complete and results are valid
+-- found_done      - High when no new move has been found on the board
+-- found_fromto    - Coordinate and target of the found move on the board
 --
 -- vid_row   - Board row currently displayed by the video subsystem
 -- vid_col   - Board column currently displayed by the video subsystem
@@ -44,12 +51,12 @@ use work.fpgachess_pkg.all;
 entity fpgachess_board is
 	port (
 		clk : in std_logic;
+		busy : out std_logic;
 
 		new_game_trig : in std_logic;
 
 		move_trig : in std_logic;
 		move_fromto : in unsigned(11 downto 0);
-		move_captured : out piece_t;
 		undo_trig : in std_logic;
 		undo_fromto : in unsigned(11 downto 0);
 		undo_captured : in piece_t;
@@ -60,6 +67,10 @@ entity fpgachess_board is
 		found_valid : out std_logic;
 		found_done : out std_logic;
 		found_fromto : out unsigned(11 downto 0);
+
+		movelist_trig : out std_logic;
+		movelist_fromto : out unsigned(11 downto 0);
+		movelist_captured : out piece_t;
 
 		vid_row : in unsigned(2 downto 0);
 		vid_col : in unsigned(2 downto 0);
@@ -75,6 +86,7 @@ architecture rtl of fpgachess_board is
 	constant eval_sum_bits : integer := 12;
 	constant eval_part_bits : integer := 8;
 
+	signal busy_reg : std_logic := '0';
 	signal vid_piece_reg : piece_t := (others => '0');
 
 	type board_t is array(0 to 63) of piece_t;
@@ -99,12 +111,11 @@ architecture rtl of fpgachess_board is
 	signal eval_sum_reg : signed(eval_sum_bits-1 downto 0) := (others => '0');
 
 	signal move_piece_reg : extpiece_t := ext_empty;
-	signal move_captured_reg : piece_t := piece_empty;
 	signal move_phase2_reg : std_logic := '0';
 	signal undo_phase2_reg : std_logic := '0';
 	signal update_display_reg : std_logic := '0';
 begin
-	move_captured <= move_captured_reg;
+	busy <= busy_reg;
 	vid_piece <= vid_piece_reg;
 	vid_eval <= eval_sum_reg;
 
@@ -180,38 +191,54 @@ begin
 		end process;
 	end block;
 
-	process(clk)
+	move_blk : block
+		signal fromto_reg : unsigned(11 downto 0);
+		signal movelist_trig_reg : std_logic := '0';
+		signal movelist_fromto_reg : unsigned(movelist_fromto'range) := (others => '0');
+		signal movelist_captured_reg : unsigned(movelist_captured'range) := (others => '0');
 	begin
-		if rising_edge(clk) then
-			move_phase2_reg <= '0';
-			undo_phase2_reg <= '0';
-			update_display_reg <= '0';
+		movelist_trig <= movelist_trig_reg;
+		movelist_fromto <= movelist_fromto_reg;
+		movelist_captured <= movelist_captured_reg;
 
-			if new_game_trig = '1' then
-				eval_board_reg <= init_board;
-				update_display_reg <= '1';
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				move_phase2_reg <= '0';
+				undo_phase2_reg <= '0';
+				movelist_trig_reg <= '0';
+				update_display_reg <= '0';
+
+				if new_game_trig = '1' then
+					eval_board_reg <= init_board;
+					update_display_reg <= '1';
+				end if;
+				if move_trig = '1' then
+					move_phase2_reg <= '1';
+					fromto_reg <= move_fromto;
+					movelist_trig_reg <= '1';
+					movelist_fromto_reg <= move_fromto;
+					movelist_captured_reg <= to_piece(eval_board_reg(to_integer(move_fromto(5 downto 0))));
+					move_piece_reg <= eval_board_reg(to_integer(move_fromto(11 downto 6)));
+				end if;
+				if move_phase2_reg = '1' then
+					eval_board_reg(to_integer(fromto_reg(5 downto 0))) <= move_piece_reg;
+					eval_board_reg(to_integer(fromto_reg(11 downto 6))) <= piece_empty;
+					update_display_reg <= '1';
+				end if;
+				if undo_trig = '1' then
+					undo_phase2_reg <= '1';
+					fromto_reg <= undo_fromto;
+					move_piece_reg <= eval_board_reg(to_integer(undo_fromto(5 downto 0)));
+				end if;
+				if undo_phase2_reg = '1' then
+					eval_board_reg(to_integer(fromto_reg(5 downto 0))) <= to_extpiece(undo_captured);
+					eval_board_reg(to_integer(fromto_reg(11 downto 6))) <= move_piece_reg;
+					update_display_reg <= '1';
+				end if;
 			end if;
-			move_captured_reg <= to_piece(eval_board_reg(to_integer(move_fromto(5 downto 0))));
-			if move_trig = '1' then
-				move_phase2_reg <= '1';
-				move_piece_reg <= eval_board_reg(to_integer(move_fromto(11 downto 6)));
-			end if;
-			if move_phase2_reg = '1' then
-				eval_board_reg(to_integer(move_fromto(5 downto 0))) <= move_piece_reg;
-				eval_board_reg(to_integer(move_fromto(11 downto 6))) <= piece_empty;
-				update_display_reg <= '1';
-			end if;
-			if undo_trig = '1' then
-				undo_phase2_reg <= '1';
-				move_piece_reg <= eval_board_reg(to_integer(undo_fromto(5 downto 0)));
-			end if;
-			if undo_phase2_reg = '1' then
-				eval_board_reg(to_integer(undo_fromto(5 downto 0))) <= to_extpiece(undo_captured);
-				eval_board_reg(to_integer(undo_fromto(11 downto 6))) <= move_piece_reg;
-				update_display_reg <= '1';
-			end if;
-		end if;
-	end process;
+		end process;
+	end block;
 
 	search_blk : block
 		signal found_valid_reg : std_logic := '0';
@@ -231,6 +258,7 @@ begin
 		process(clk)
 			variable valid : std_logic;
 			variable skip : std_logic;
+			variable col : integer range 0 to 7;
 			variable row : integer range 0 to 7;
 			variable cell : integer range 0 to 63;
 			variable dest : integer range 0 to 63;
@@ -250,8 +278,10 @@ begin
 				if search_check_reg = '1' then
 					valid := '0';
 					skip := '0';
+					col := to_integer(search_from_reg(2 downto 0));
 					row := to_integer(search_from_reg(5 downto 3));
 					cell := to_integer(search_from_reg(5 downto 0));
+					dest := to_integer(search_to_reg);
 
 					search_check_reg <= '0';
 					if ((search_color = '0') and (search_piece_reg(4) = '0'))
@@ -270,13 +300,13 @@ begin
 							elsif search_to_reg = cell+8 then
 								-- Capture left
 								dest := cell+7;
-								if eval_board_reg(dest)(4 downto 3) = "01" then
+								if (eval_board_reg(dest)(3) = '1') and (col /= 0) then
 									valid := '1';
 								end if;
 							elsif search_to_reg = cell+7 then
 								-- Capture right
 								dest := cell+9;
-								if eval_board_reg(dest)(4 downto 3) = "01" then
+								if (eval_board_reg(dest)(3) = '1') and (col /= 7) then
 									valid := '1';
 								end if;
 							elsif (search_to_reg = cell+9) and (row = 1) then
@@ -298,13 +328,13 @@ begin
 							elsif search_to_reg = cell-8 then
 								-- Capture right
 								dest := cell-7;
-								if eval_board_reg(dest)(4 downto 3) = "10" then
+								if (eval_board_reg(dest)(4) = '1') and (col /= 7) then
 									valid := '1';
 								end if;
 							elsif search_to_reg = cell-7 then
 								-- Capture left
 								dest := cell-9;
-								if eval_board_reg(dest)(4 downto 3) = "10" then
+								if (eval_board_reg(dest)(4) = '1') and (col /= 0) then
 									valid := '1';
 								end if;
 							elsif (search_to_reg = cell-9) and (row = 6) then

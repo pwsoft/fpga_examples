@@ -25,7 +25,14 @@
 --
 -- Part of FPGA-Chess
 -- Keeps track of played moves. Both for display of previous moves, but also
--- for undo/redo and review/analysis of a game.
+-- for undo/redo and review/analysis of a game. Also assists storing search
+-- state.
+--
+-- -----------------------------------------------------------------------
+--
+-- search_mode  - When set the moves are stored in the search list
+--                Separate from the normal move list and used to store and
+--                undo moves while traversing the min/max tree.
 --
 -- -----------------------------------------------------------------------
 
@@ -47,6 +54,8 @@ entity fpgachess_movelist is
 		clk : in std_logic;
 
 		new_game_trig : in std_logic;
+		search_mode : in std_logic;
+
 		move_trig : in std_logic;
 		undo_trig : in std_logic;
 		redo_trig : in std_logic;
@@ -71,8 +80,10 @@ end entity;
 -- -----------------------------------------------------------------------
 
 architecture rtl of fpgachess_movelist is
-	type moves_t is array(0 to (2**ply_count_bits)-1) of unsigned(11 downto 0);
-	type captures_t is array(0 to (2**ply_count_bits)-1) of piece_t;
+	-- Add one bit to get twice the storage as half of it is used for storing search tree
+	constant storage_bits : integer := ply_count_bits+1;
+	type moves_t is array(0 to (2**storage_bits)-1) of unsigned(11 downto 0);
+	type captures_t is array(0 to (2**storage_bits)-1) of piece_t;
 	signal moves_reg : moves_t := (others => (others => '0'));
 	signal captures_reg : captures_t := (others => (others => '0'));
 	signal readout_fromto_reg : unsigned(11 downto 0) := (others => '0');
@@ -89,10 +100,12 @@ architecture rtl of fpgachess_movelist is
 	signal current_pos_reg : unsigned(ply_count_bits downto 0) := (others => '0');
 	signal max_count_reg : unsigned(ply_count_bits downto 0) := (others => '0');
 
-	signal vid_move_show_reg : unsigned(vid_move_show'range) := (others => '0');
-	signal vid_move_ply_reg : unsigned(vid_move_ply'range) := (others => '0');
-	signal vid_move_white_reg : unsigned(vid_move_white'range) := (others => '0');
-	signal vid_move_black_reg : unsigned(vid_move_black'range) := (others => '0');
+	-- Position counters for search
+	signal search_pos_reg : unsigned(ply_count_bits downto 0) := (others => '0');
+
+	signal vid_move_addr : unsigned(storage_bits-1 downto 0) := (others => '0');
+	signal vid_white_trig : std_logic;
+	signal vid_black_trig : std_logic;
 begin
 	undo_valid <= undo_valid_reg;
 	undo_fromto <= undo_fromto_reg;
@@ -100,25 +113,26 @@ begin
 	redo_valid <= '0'; --redo_valid_reg;
 	redo_fromto <= redo_fromto_reg;
 
-	vid_move_show <= vid_move_show_reg;
-	vid_move_ply <= vid_move_ply_reg;
-	vid_move_white <= vid_move_white_reg;
-	vid_move_black <= vid_move_black_reg;
 
 	memory_blk : block
 		signal we_reg : std_logic := '0';
-		signal addr_reg : unsigned(ply_count_bits-1 downto 0) := (others => '0');
+		signal addr_reg : unsigned(storage_bits-1 downto 0) := (others => '0');
+		signal fromto_reg : unsigned(move_fromto'range) := (others => '0');
 
 		signal undo_update_reg : std_logic := '0';
 		signal undo_ready_reg : unsigned(1 downto 0) := (others => '0');
 		signal vid_ready_reg : unsigned(1 downto 0) := (others => '0');
 		signal vid_color_reg : unsigned(1 downto 0) := (others => '0');
 	begin
+		-- A history read for the video output has completed (after 2 cycles)
+		vid_white_trig <= '1' when (vid_ready_reg(1) = '1') and vid_color_reg(1) = '0' else '0';
+		vid_black_trig <= '1' when (vid_ready_reg(1) = '1') and vid_color_reg(1) = '1' else '0';
+
 		process(clk)
 		begin
 			if rising_edge(clk) then
 				if we_reg = '1' then
-					moves_reg(to_integer(addr_reg)) <= move_fromto;
+					moves_reg(to_integer(addr_reg)) <= fromto_reg;
 					captures_reg(to_integer(addr_reg)) <= move_captured;
 				else
 					readout_fromto_reg <= moves_reg(to_integer(addr_reg));
@@ -151,12 +165,15 @@ begin
 					we_reg <= '1';
 					undo_valid_reg <= '1';
 					redo_valid_reg <= '0';
-					addr_reg <= current_pos_reg(addr_reg'range);
+					fromto_reg <= move_fromto;
+					addr_reg(ply_count_bits-1 downto 0) <= current_pos_reg(ply_count_bits-1 downto 0);
+					addr_reg(addr_reg'high) <= '0';
 					undo_fromto_reg <= move_fromto;
 					undo_captured_reg <= move_captured;
 				elsif undo_update_reg = '1' then
 					undo_valid_reg <= '0';
-					addr_reg <= current_pos_reg(addr_reg'range)-1;
+					addr_reg(ply_count_bits-1 downto 0) <= current_pos_reg(ply_count_bits-1 downto 0)-1;
+					addr_reg(addr_reg'high) <= '0';
 					if current_pos_reg > 0 then
 						undo_ready_reg(0) <= '1';
 					end if;
@@ -165,7 +182,7 @@ begin
 					-- Done at lowest priority as data is displayed on the most right side of the screen
 					-- So an almost full line of time is available to read the memory
 					vid_color_reg(0) <= not vid_color_reg(0);
-					addr_reg <= vid_move_ply_reg;
+					addr_reg <= vid_move_addr;
 					addr_reg(0) <= not vid_color_reg(0);
 					vid_ready_reg(0) <= '1';
 				end if;
@@ -175,15 +192,6 @@ begin
 					undo_valid_reg <= '1';
 					undo_fromto_reg <= readout_fromto_reg;
 					undo_captured_reg <= readout_captured_reg;
-				end if;
-
-				-- A history read for the video output has completed (after 2 cycles)
-				if vid_ready_reg(1) = '1' then
-					if vid_color_reg(1) = '0' then
-						vid_move_white_reg <= readout_fromto_reg;
-					else
-						vid_move_black_reg <= readout_fromto_reg;
-					end if;
 				end if;
 			end if;
 		end process;
@@ -209,24 +217,45 @@ begin
 		end if;
 	end process;
 
-	process(clk)
+	video_blk : block
+		signal vid_move_show_reg : unsigned(vid_move_show'range) := (others => '0');
+		signal vid_move_ply_reg : unsigned(vid_move_ply'range) := (others => '0');
+		signal vid_move_white_reg : unsigned(vid_move_white'range) := (others => '0');
+		signal vid_move_black_reg : unsigned(vid_move_black'range) := (others => '0');
 	begin
-		if rising_edge(clk) then
-			vid_move_show_reg <= (others => '0');
+		vid_move_show <= vid_move_show_reg;
+		vid_move_ply <= vid_move_ply_reg;
+		vid_move_white <= vid_move_white_reg;
+		vid_move_black <= vid_move_black_reg;
 
-			if (vid_line >= vid_line_start) and (vid_line < vid_line_end) then
-				vid_move_ply_reg(vid_move_ply_reg'high downto 1) <= resize(vid_line, ply_count_bits-1) - vid_line_start;
-				vid_move_ply_reg(0) <= '0';
+		vid_move_addr <= "0" & vid_move_ply_reg;
 
-				if vid_move_ply_reg < max_count_reg then
-					-- At least white made a turn in this move
-					vid_move_show_reg(0) <= '1';
-					if vid_move_ply_reg < max_count_reg-1 then
-						-- Black also made turn this move, so enable both bits
-						vid_move_show_reg(1) <= '1';
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				vid_move_show_reg <= (others => '0');
+
+				if (vid_line >= vid_line_start) and (vid_line < vid_line_end) then
+					vid_move_ply_reg(vid_move_ply_reg'high downto 1) <= resize(vid_line, ply_count_bits-1) - vid_line_start;
+					vid_move_ply_reg(0) <= '0';
+
+					if vid_move_ply_reg < max_count_reg then
+						-- At least white made a turn in this move
+						vid_move_show_reg(0) <= '1';
+						if vid_move_ply_reg < max_count_reg-1 then
+							-- Black also made turn this move, so enable both bits
+							vid_move_show_reg(1) <= '1';
+						end if;
 					end if;
 				end if;
+
+				if vid_white_trig = '1' then
+					vid_move_white_reg <= readout_fromto_reg;
+				end if;
+				if vid_black_trig = '1' then
+					vid_move_black_reg <= readout_fromto_reg;
+				end if;
 			end if;
-		end if;
-	end process;
+		end process;
+	end block;
 end architecture;

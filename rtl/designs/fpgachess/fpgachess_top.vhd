@@ -63,19 +63,36 @@ end entity;
 
 architecture rtl of fpgachess_top is
 	constant ply_count_bits : integer := 8;
+	constant top_move_bits : integer := 8;
+	constant eval_score_bits : integer := 12;
 
 	signal new_game_trig : std_logic;
+	signal search_start_trig : std_logic;
 	signal white_top : std_logic;
 	signal move_trig : std_logic;
 	signal undo_trig : std_logic;
 	signal redo_trig : std_logic;
-	signal move_captured : piece_t;
+
+	signal movelist_trig : std_logic;
+	signal movelist_fromto : unsigned(11 downto 0);
+	signal movelist_captured : piece_t;
 
 	signal undo_valid : std_logic;
 	signal undo_fromto : unsigned(11 downto 0);
 	signal undo_captured : piece_t;
 	signal redo_valid : std_logic;
 	signal redo_fromto : unsigned(11 downto 0);
+
+	signal searching : std_logic;
+	signal search_trig : std_logic;
+	signal search_color : std_logic;
+	signal search_fromto : unsigned(11 downto 0);
+	signal found_valid : std_logic;
+	signal found_done : std_logic;
+	signal found_fromto : unsigned(11 downto 0);
+
+	signal search_move_trig : std_logic;
+	signal search_move_fromto : unsigned(11 downto 0);
 
 	signal cursor_row : unsigned(2 downto 0);
 	signal cursor_col : unsigned(3 downto 0);
@@ -94,6 +111,7 @@ architecture rtl of fpgachess_top is
 	signal vid_move_black : unsigned(11 downto 0);
 begin
 	board_blk : block
+		signal trig_loc : std_logic;
 		signal move_from : unsigned(5 downto 0);
 		signal move_to : unsigned(5 downto 0);
 	begin
@@ -103,17 +121,23 @@ begin
 
 				new_game_trig => new_game_trig,
 
-				move_trig => move_trig,
+				move_trig => trig_loc,
 				move_fromto => move_from & move_to,
-				move_captured => move_captured,
 
 				undo_trig => undo_trig,
 				undo_fromto => undo_fromto,
 				undo_captured => undo_captured,
 
-				search_trig => '0',
-				search_color => '0',
-				search_fromto => (others => '0'),
+				search_trig => search_trig,
+				search_color => search_color,
+				search_fromto => search_fromto,
+				found_valid => found_valid,
+				found_done => found_done,
+				found_fromto => found_fromto,
+
+				movelist_trig => movelist_trig,
+				movelist_fromto => movelist_fromto,
+				movelist_captured => movelist_captured,
 
 				vid_col => vid_col,
 				vid_row => vid_row,
@@ -121,9 +145,40 @@ begin
 
 				vid_eval => vid_eval
 			);
-		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
-		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+		trig_loc <= move_trig or search_move_trig;
+		move_from <=
+			search_move_fromto(11 downto 6) when search_move_trig = '1' else
+			((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+		move_to <=
+			search_move_fromto(5 downto 0) when search_move_trig = '1' else
+			((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
 	end block;
+
+	search_inst : entity work.fpgachess_search
+		generic map (
+			ply_count_bits => ply_count_bits,
+			top_move_bits => top_move_bits,
+			eval_score_bits => eval_score_bits
+		)
+		port map (
+			clk => clk,
+			reset => reset,
+
+			search_start_color => '1',
+			search_start_trig => search_start_trig,
+			search_abort_trig => '0',
+
+			searching => searching,
+			search_trig => search_trig,
+			search_color => search_color,
+			search_fromto => search_fromto,
+			found_valid => found_valid,
+			found_done => found_done,
+			found_fromto => found_fromto,
+
+			move_trig => search_move_trig,
+			move_fromto => search_move_fromto
+		);
 
 	ui_inst : entity work.fpgachess_ui
 		port map (
@@ -141,6 +196,7 @@ begin
 			cursor_enter => cursor_enter,
 
 			new_game_trig => new_game_trig,
+			search_start_trig => search_start_trig,
 			white_top => white_top,
 			move_trig => move_trig,
 			undo_trig => undo_trig,
@@ -153,43 +209,38 @@ begin
 			cursor_select_col => cursor_select_col
 		);
 
-	movelist_blk : block
-		signal move_from : unsigned(5 downto 0);
-		signal move_to : unsigned(5 downto 0);
-	begin
-		movelist_inst : entity work.fpgachess_movelist
-			generic map (
-				ply_count_bits => ply_count_bits,
-				scroll_threshold => 5,
-				vid_line_start => 1,
-				vid_line_end => 25
-			)
-			port map (
-				clk => clk,
+	movelist_inst : entity work.fpgachess_movelist
+		generic map (
+			ply_count_bits => ply_count_bits,
+			scroll_threshold => 5,
+			vid_line_start => 1,
+			vid_line_end => 25
+		)
+		port map (
+			clk => clk,
 
-				new_game_trig => new_game_trig,
-				move_trig => move_trig,
-				undo_trig => undo_trig,
-				redo_trig => redo_trig,
+			new_game_trig => new_game_trig,
+			search_mode => searching,
 
-				move_fromto => move_from & move_to,
-				move_captured => move_captured,
+			move_trig => movelist_trig,
+			undo_trig => undo_trig,
+			redo_trig => redo_trig,
 
-				undo_valid => undo_valid,
-				undo_fromto => undo_fromto,
-				undo_captured => undo_captured,
-				redo_valid => redo_valid,
-				redo_fromto => redo_fromto,
+			move_fromto => movelist_fromto,
+			move_captured => movelist_captured,
 
-				vid_line => vid_line,
-				vid_move_show => vid_move_show,
-				vid_move_ply => vid_move_ply,
-				vid_move_white => vid_move_white,
-				vid_move_black => vid_move_black
-			);
-		move_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
-		move_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
-	end block;
+			undo_valid => undo_valid,
+			undo_fromto => undo_fromto,
+			undo_captured => undo_captured,
+			redo_valid => redo_valid,
+			redo_fromto => redo_fromto,
+
+			vid_line => vid_line,
+			vid_move_show => vid_move_show,
+			vid_move_ply => vid_move_ply,
+			vid_move_white => vid_move_white,
+			vid_move_black => vid_move_black
+		);
 
 	video_inst : entity work.fpgachess_video
 		generic map (
