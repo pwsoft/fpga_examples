@@ -65,7 +65,6 @@ entity fpgachess_board is
 		search_ack : out std_logic;
 		search_color : in std_logic;
 		search_fromto : in unsigned(11 downto 0);
-		found_valid : out std_logic;
 		found_done : out std_logic;
 		found_fromto : out unsigned(11 downto 0);
 
@@ -244,7 +243,6 @@ begin
 	search_blk : block
 		signal search_req_reg : std_logic := '0';
 		signal search_ack_reg : std_logic := '0';
-		signal found_valid_reg : std_logic := '0';
 		signal search_fetch_reg : std_logic := '0';
 		signal search_check_reg : std_logic := '0';
 		signal search_piece_reg : extpiece_t := ext_empty;
@@ -255,7 +253,6 @@ begin
 	begin
 		search_ack <= search_ack_reg;
 		search_from_incr <= search_from_reg + 1;
-		found_valid <= found_valid_reg;
 		found_done <= search_from_reg(6);
 		found_fromto <= search_from_reg(5 downto 0) & search_to_reg;
 
@@ -264,14 +261,13 @@ begin
 			variable skip : std_logic;
 			variable col : integer range 0 to 7;
 			variable row : integer range 0 to 7;
-			variable cell : integer range 0 to 63;
-			variable dest : integer range 0 to 63;
+			variable cell : unsigned(5 downto 0);
+			variable dest : unsigned(5 downto 0);
 		begin
 			if rising_edge(clk) then
 				if search_from_reg(6) = '1' then
 					-- Searched every cell
 					search_ack_reg <= search_req_reg;
-					found_valid_reg <= '1';
 					search_fetch_reg <= '0';
 					search_check_reg <= '0';
 				elsif search_fetch_reg = '1' then
@@ -285,8 +281,8 @@ begin
 					skip := '0';
 					col := to_integer(search_from_reg(2 downto 0));
 					row := to_integer(search_from_reg(5 downto 3));
-					cell := to_integer(search_from_reg(5 downto 0));
-					dest := to_integer(search_to_reg);
+					cell := search_from_reg(5 downto 0);
+					dest := search_to_reg;
 
 					search_check_reg <= '0';
 					if ((search_color = '0') and (search_piece_reg(4) = '0'))
@@ -299,25 +295,25 @@ begin
 							if search_to_reg = search_from_reg then
 								-- Move forward once
 								dest := cell+8;
-								if eval_board_reg(dest)(4 downto 3) = "00" then
+								if eval_board_reg(to_integer(dest))(4 downto 3) = "00" then
 									valid := '1';
 								end if;
 							elsif search_to_reg = cell+8 then
 								-- Capture left
 								dest := cell+7;
-								if (eval_board_reg(dest)(3) = '1') and (col /= 0) then
+								if (eval_board_reg(to_integer(dest))(3) = '1') and (col /= 0) then
 									valid := '1';
 								end if;
 							elsif search_to_reg = cell+7 then
 								-- Capture right
 								dest := cell+9;
-								if (eval_board_reg(dest)(3) = '1') and (col /= 7) then
+								if (eval_board_reg(to_integer(dest))(3) = '1') and (col /= 7) then
 									valid := '1';
 								end if;
 							elsif (search_to_reg = cell+9) and (row = 1) then
 								-- Two spaces forward on row one
 								dest := cell+16;
-								if (eval_board_reg(cell+8)(4 downto 3) = "00") and (eval_board_reg(dest)(4 downto 3) = "00") then
+								if (eval_board_reg(to_integer(cell+8))(4 downto 3) = "00") and (eval_board_reg(to_integer(dest))(4 downto 3) = "00") then
 									valid := '1';
 								end if;
 							else
@@ -327,26 +323,98 @@ begin
 							if search_to_reg = search_from_reg then
 								-- Move forward once
 								dest := cell-8;
-								if eval_board_reg(dest)(4 downto 3) = "00" then
+								if eval_board_reg(to_integer(dest))(4 downto 3) = "00" then
 									valid := '1';
 								end if;
 							elsif search_to_reg = cell-8 then
 								-- Capture right
 								dest := cell-7;
-								if (eval_board_reg(dest)(4) = '1') and (col /= 7) then
-									valid := '1';
+								if (col /= 7) then
+									if (eval_board_reg(to_integer(dest))(4) = '1') then
+										valid := '1';
+									end if;
 								end if;
 							elsif search_to_reg = cell-7 then
 								-- Capture left
 								dest := cell-9;
-								if (eval_board_reg(dest)(4) = '1') and (col /= 0) then
-									valid := '1';
+								if (col /= 0) then
+									if (eval_board_reg(to_integer(dest))(4) = '1') then
+										valid := '1';
+									end if;
 								end if;
 							elsif (search_to_reg = cell-9) and (row = 6) then
 								-- Two spaces forward on row six
 								dest := cell-16;
-								if (eval_board_reg(cell-8)(4 downto 3) = "00") and (eval_board_reg(dest)(4 downto 3) = "00") then
+								if (eval_board_reg(to_integer(cell-8))(4 downto 3) = "00") and (eval_board_reg(to_integer(dest))(4 downto 3) = "00") then
 									valid := '1';
+								end if;
+							else
+								skip := '1';
+							end if;
+						when piece_white & piece_knight | piece_black & piece_knight =>
+							if search_to_reg = search_from_reg then
+								-- Two up, right
+								dest := cell+17;
+								if (row < 6) and (col /= 7) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif search_to_reg = cell+17 then
+								-- Two up, left
+								dest := cell+15;
+								if (row < 6) and (col /= 0) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif search_to_reg = cell+15 then
+								-- up, two right
+								dest := cell+10;
+								if (row /= 7) and (col < 6) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif search_to_reg = cell+10 then
+								-- up, two left
+								dest := cell+6;
+								if (row /= 7) and (col > 1) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif search_to_reg = cell+6 then
+								-- down, two right
+								dest := cell-6;
+								if (row /= 0) and (col < 6) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif search_to_reg = cell-6 then
+								-- down, two left
+								dest := cell-10;
+								if (row /= 0) and (col > 1) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif search_to_reg = cell-10 then
+								-- two down, right
+								dest := cell-15;
+								if (row > 1) and (col /= 7) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif search_to_reg = cell-15 then
+								-- two down, left
+								dest := cell-17;
+								if (row > 1) and (col /= 0) then
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
 								end if;
 							else
 								skip := '1';
@@ -356,7 +424,7 @@ begin
 						end case;
 					end if;
 
-					search_to_reg <= to_unsigned(dest, 6);
+					search_to_reg <= dest;
 					if valid = '1' then
 						search_ack_reg <= search_req_reg;
 					else
@@ -370,7 +438,6 @@ begin
 
 				if search_req /= search_req_reg then
 					search_req_reg <= search_req;
-					found_valid_reg <= '0';
 					search_fetch_reg <= '1';
 					search_check_reg <= '0';
 					search_from_reg <= "0" & search_fromto(11 downto 6);
