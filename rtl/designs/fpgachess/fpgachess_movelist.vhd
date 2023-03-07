@@ -53,9 +53,9 @@ entity fpgachess_movelist is
 	port (
 		clk : in std_logic;
 
-		new_game_trig : in std_logic;
 		search_mode : in std_logic;
 
+		clear_trig : in std_logic;
 		move_trig : in std_logic;
 		undo_trig : in std_logic;
 		redo_trig : in std_logic;
@@ -72,8 +72,8 @@ entity fpgachess_movelist is
 		vid_line : in unsigned(5 downto 0);
 		vid_move_show : out unsigned(1 downto 0);
 		vid_move_ply : out unsigned(ply_count_bits-1 downto 0);
-		vid_move_white : out unsigned(11 downto 0);
-		vid_move_black : out unsigned(11 downto 0)
+		vid_white_fromto : out unsigned(11 downto 0);
+		vid_black_fromto : out unsigned(11 downto 0)
 	);
 end entity;
 
@@ -100,7 +100,7 @@ architecture rtl of fpgachess_movelist is
 	signal current_pos_reg : unsigned(ply_count_bits downto 0) := (others => '0');
 	signal max_count_reg : unsigned(ply_count_bits downto 0) := (others => '0');
 
-	-- Position counters for search
+	-- These are position counters used only for search
 	signal search_pos_reg : unsigned(ply_count_bits downto 0) := (others => '0');
 
 	signal vid_move_addr : unsigned(storage_bits-1 downto 0) := (others => '0');
@@ -124,7 +124,7 @@ begin
 		signal vid_ready_reg : unsigned(1 downto 0) := (others => '0');
 		signal vid_color_reg : unsigned(1 downto 0) := (others => '0');
 	begin
-		-- A history read for the video output has completed (after 2 cycles)
+		-- A memory read for the video output has completed (after 2 cycles)
 		vid_white_trig <= '1' when (vid_ready_reg(1) = '1') and vid_color_reg(1) = '0' else '0';
 		vid_black_trig <= '1' when (vid_ready_reg(1) = '1') and vid_color_reg(1) = '1' else '0';
 
@@ -150,7 +150,7 @@ begin
 				vid_ready_reg <= vid_ready_reg(0) & '0';
 				vid_color_reg(1) <= vid_color_reg(0);
 
-				if (new_game_trig = '1') or (undo_trig = '1') then
+				if (clear_trig = '1') or (undo_trig = '1') then
 					-- Last move information is not valid (possibly will become again once fetched)
 					undo_ready_reg <= "00";
 					undo_valid_reg <= '0';
@@ -200,7 +200,7 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			if new_game_trig = '1' then
+			if clear_trig = '1' then
 				current_pos_reg <= (others => '0');
 				max_count_reg <= (others => '0');
 			end if;
@@ -220,13 +220,13 @@ begin
 	video_blk : block
 		signal vid_move_show_reg : unsigned(vid_move_show'range) := (others => '0');
 		signal vid_move_ply_reg : unsigned(vid_move_ply'range) := (others => '0');
-		signal vid_move_white_reg : unsigned(vid_move_white'range) := (others => '0');
-		signal vid_move_black_reg : unsigned(vid_move_black'range) := (others => '0');
+		signal vid_white_fromto_reg : unsigned(vid_white_fromto'range) := (others => '0');
+		signal vid_black_fromto_reg : unsigned(vid_black_fromto'range) := (others => '0');
 	begin
 		vid_move_show <= vid_move_show_reg;
 		vid_move_ply <= vid_move_ply_reg;
-		vid_move_white <= vid_move_white_reg;
-		vid_move_black <= vid_move_black_reg;
+		vid_white_fromto <= vid_white_fromto_reg;
+		vid_black_fromto <= vid_black_fromto_reg;
 
 		vid_move_addr <= "0" & vid_move_ply_reg;
 
@@ -250,10 +250,10 @@ begin
 				end if;
 
 				if vid_white_trig = '1' then
-					vid_move_white_reg <= readout_fromto_reg;
+					vid_white_fromto_reg <= readout_fromto_reg;
 				end if;
 				if vid_black_trig = '1' then
-					vid_move_black_reg <= readout_fromto_reg;
+					vid_black_fromto_reg <= readout_fromto_reg;
 				end if;
 			end if;
 		end process;

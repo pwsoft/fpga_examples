@@ -180,6 +180,39 @@ begin
 			move_fromto => search_move_fromto
 		);
 
+	movelist_inst : entity work.fpgachess_movelist
+		generic map (
+			ply_count_bits => ply_count_bits,
+			scroll_threshold => 5,
+			vid_line_start => 1,
+			vid_line_end => 25
+		)
+		port map (
+			clk => clk,
+
+			search_mode => searching,
+
+			clear_trig => new_game_trig,
+			move_trig => movelist_trig,
+			undo_trig => undo_trig,
+			redo_trig => redo_trig,
+
+			move_fromto => movelist_fromto,
+			move_captured => movelist_captured,
+
+			undo_valid => undo_valid,
+			undo_fromto => undo_fromto,
+			undo_captured => undo_captured,
+			redo_valid => redo_valid,
+			redo_fromto => redo_fromto,
+
+			vid_line => vid_line,
+			vid_move_show => vid_move_show,
+			vid_move_ply => vid_move_ply,
+			vid_white_fromto => vid_move_white,
+			vid_black_fromto => vid_move_black
+		);
+
 	ui_inst : entity work.fpgachess_ui
 		port map (
 			clk => clk,
@@ -207,39 +240,6 @@ begin
 			cursor_select => cursor_select,
 			cursor_select_row => cursor_select_row,
 			cursor_select_col => cursor_select_col
-		);
-
-	movelist_inst : entity work.fpgachess_movelist
-		generic map (
-			ply_count_bits => ply_count_bits,
-			scroll_threshold => 5,
-			vid_line_start => 1,
-			vid_line_end => 25
-		)
-		port map (
-			clk => clk,
-
-			new_game_trig => new_game_trig,
-			search_mode => searching,
-
-			move_trig => movelist_trig,
-			undo_trig => undo_trig,
-			redo_trig => redo_trig,
-
-			move_fromto => movelist_fromto,
-			move_captured => movelist_captured,
-
-			undo_valid => undo_valid,
-			undo_fromto => undo_fromto,
-			undo_captured => undo_captured,
-			redo_valid => redo_valid,
-			redo_fromto => redo_fromto,
-
-			vid_line => vid_line,
-			vid_move_show => vid_move_show,
-			vid_move_ply => vid_move_ply,
-			vid_move_white => vid_move_white,
-			vid_move_black => vid_move_black
 		);
 
 	video_inst : entity work.fpgachess_video
