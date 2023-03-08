@@ -53,6 +53,7 @@ entity fpgachess_movelist is
 	port (
 		clk : in std_logic;
 
+		current_color : out std_logic;
 		search_mode : in std_logic;
 
 		clear_trig : in std_logic;
@@ -107,12 +108,12 @@ architecture rtl of fpgachess_movelist is
 	signal vid_white_trig : std_logic;
 	signal vid_black_trig : std_logic;
 begin
+	current_color <= current_pos_reg(0);
 	undo_valid <= undo_valid_reg;
 	undo_fromto <= undo_fromto_reg;
 	undo_captured <= undo_captured_reg;
 	redo_valid <= '0'; --redo_valid_reg;
 	redo_fromto <= redo_fromto_reg;
-
 
 	memory_blk : block
 		signal we_reg : std_logic := '0';

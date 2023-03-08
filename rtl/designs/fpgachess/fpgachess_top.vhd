@@ -73,6 +73,8 @@ architecture rtl of fpgachess_top is
 	signal undo_trig : std_logic;
 	signal redo_trig : std_logic;
 
+	signal current_color : std_logic;
+
 	signal movelist_trig : std_logic;
 	signal movelist_fromto : unsigned(11 downto 0);
 	signal movelist_captured : piece_t;
@@ -164,7 +166,7 @@ begin
 			clk => clk,
 			reset => reset,
 
-			search_start_color => '1',
+			search_start_color => current_color,
 			search_start_trig => search_start_trig,
 			search_abort_trig => '0',
 
@@ -190,6 +192,7 @@ begin
 		port map (
 			clk => clk,
 
+			current_color => current_color,
 			search_mode => searching,
 
 			clear_trig => new_game_trig,
