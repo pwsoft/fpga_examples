@@ -246,6 +246,9 @@ begin
 		signal search_fetch_reg : std_logic := '0';
 		signal search_check_reg : std_logic := '0';
 		signal search_piece_reg : extpiece_t := ext_empty;
+		-- Possible captured/attacked piece in last search move.
+		-- Used in move checks for rooks, bishops and queens so they don't move through opponent pieces.
+		signal search_lastp_reg : extpiece_t := ext_empty;
 
 		signal search_from_reg : unsigned(6 downto 0) := (others => '0');
 		signal search_to_reg : unsigned(5 downto 0) := (others => '0');
@@ -274,6 +277,7 @@ begin
 					search_fetch_reg <= '0';
 					search_check_reg <= '1';
 					search_piece_reg <= eval_board_reg(to_integer(search_from_reg(5 downto 0)));
+					search_lastp_reg <= eval_board_reg(to_integer(search_to_reg(5 downto 0)));
 				end if;
 
 				if search_check_reg = '1' then
@@ -418,6 +422,98 @@ begin
 								end if;
 							else
 								skip := '1';
+							end if;
+						when piece_white & piece_rook | piece_black & piece_rook =>
+							if search_to_reg = search_from_reg then
+								if (col /= 7) then
+									dest := cell+1;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								else
+									dest := cell-1;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif (dest(5 downto 3) = cell(5 downto 3)) and (dest(2 downto 0) > cell(2 downto 0)) then
+								-- Going right
+								if (search_lastp_reg(4 downto 3) = "00") and (dest(2 downto 0) /= 7) then
+									-- Only go right further if not hitting right border and last destination empty (can't move through opponent)
+									dest := dest+1;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								elsif (col /= 0) then
+									-- Try going left
+									dest := cell-1;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								elsif (row /= 7) then
+									-- Try going up
+									dest := cell+8;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								else
+									-- Try going down
+									dest := cell-8;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif (dest(5 downto 3) = cell(5 downto 3)) and (dest(2 downto 0) < cell(2 downto 0)) then
+								-- Going left
+								if (search_lastp_reg(4 downto 3) = "00") and (dest(2 downto 0) /= 0) then
+									-- Only go left further if not hitting left border and last destination empty (can't move through opponent)
+									dest := dest-1;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								elsif (row /= 7) then
+									-- Try going up
+									dest := cell+8;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								else
+									-- Try going down
+									dest := cell-8;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								end if;
+							elsif (dest(5 downto 3) > cell(5 downto 3)) and (dest(2 downto 0) = cell(2 downto 0)) then
+								-- Going up
+								if (search_lastp_reg(4 downto 3) = "00") and (dest(5 downto 3) /= 7) then
+									-- Only go up further if not hitting upper border and last destination empty (can't move through opponent)
+									dest := dest+8;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								elsif (row /= 0) then
+									-- Try going down
+									dest := cell-8;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								else
+									-- Already checked right,left,up and can't go down
+									skip := '1';
+								end if;
+							else
+								-- Going down
+								if (search_lastp_reg(4 downto 3) = "00") and (dest(5 downto 3) /= 0) then
+									-- Only go down further if not hitting lower border and last destination empty (can't move through opponent)
+									dest := dest-8;
+									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
+										valid := '1';
+									end if;
+								else
+									-- All four directions checked
+									skip := '1';
+								end if;
 							end if;
 						when others =>
 							skip := '1';
