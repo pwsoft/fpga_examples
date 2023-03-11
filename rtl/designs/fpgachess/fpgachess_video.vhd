@@ -57,6 +57,7 @@ entity fpgachess_video is
 		cursor_select : in std_logic;
 		cursor_select_row : in unsigned(2 downto 0);
 		cursor_select_col : in unsigned(2 downto 0);
+		cursor_targets : in unsigned(63 downto 0);
 
 		vid_line : out unsigned(5 downto 0);
 		vid_row : out unsigned(2 downto 0);
@@ -86,7 +87,8 @@ architecture rtl of fpgachess_video is
 			C_BLANK, C_BACKGROUND, C_BORDER,
 			C_CHARACTER,
 			C_BOARD_CURSOR1, C_BOARD_CURSOR2, C_BOARD_LIGHT, C_BOARD_DARK,
-			C_PIECE_BLACK, C_PIECE_WHITE
+			C_PIECE_BLACK, C_PIECE_WHITE,
+			C_TARGET_MID, C_TARGET_SIDE
 		);
 	signal current_color : color_t;
 
@@ -123,6 +125,7 @@ architecture rtl of fpgachess_video is
 	signal current_char : unsigned(7 downto 0);
 	signal current_pixels : unsigned(7 downto 0);
 	signal piece_pixels : unsigned(47 downto 0);
+	signal target_dot_reg : unsigned(1 downto 0);
 begin
 -- -----------------------------------------------------------------------
 -- Video timing 640x480
@@ -950,6 +953,27 @@ begin
 			end if;
 		end process;
 
+
+		-- Generate target dot in center of pieced showing allowed moves for selected piece
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				target_dot_reg <= "00";
+
+				if (vga_matrix.board_rowy > 20) and (vga_matrix.board_rowy < 29) then
+					if (vga_matrix.board_colx > 20) and (vga_matrix.board_colx < 29) then
+						target_dot_reg <= "10";
+					end if;
+				end if;
+
+				if (vga_matrix.board_rowy > 22) and (vga_matrix.board_rowy < 27) then
+					if (vga_matrix.board_colx > 22) and (vga_matrix.board_colx < 27) then
+						target_dot_reg <= "11";
+					end if;
+				end if;
+			end if;
+		end process;
+
 	end block;
 
 -- -----------------------------------------------------------------------
@@ -993,7 +1017,20 @@ begin
 							color_reg <= C_PIECE_WHITE;
 						end if;
 					end if;
+
+					-- Highlight for selected piece
+					if cursor_select = '1' then
+						if cursor_targets(to_integer(((not vga_character.board_row) & vga_character.board_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top))) = '1' then
+							if target_dot_reg = "10" then
+								color_reg <= C_TARGET_SIDE;
+							end if;
+							if target_dot_reg = "11" then
+								color_reg <= C_TARGET_MID;
+							end if;
+						end if;
+					end if;
 				end if;
+
 				if vga_character.char_dw = '0' then
 					-- Narrow 80 column character
 					if current_pixels(to_integer(7-vga_character.x(2 downto 0))) = '1' then
@@ -1092,6 +1129,14 @@ begin
 						red_reg <= (others => '1');
 						grn_reg <= (others => '1');
 						blu_reg <= (others => '1');
+					when C_TARGET_MID =>
+						red_reg <= (others => '1');
+						grn_reg <= (others => '1');
+						blu_reg <= (others => '0');
+					when C_TARGET_SIDE =>
+						red_reg <= X"20";
+						grn_reg <= X"20";
+						blu_reg <= X"80";
 					end case;
 				end if;
 			end if;

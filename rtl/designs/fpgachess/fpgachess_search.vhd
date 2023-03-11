@@ -24,7 +24,8 @@
 -- -----------------------------------------------------------------------
 --
 -- Part of FPGA-Chess
--- Search algorithm for finding the best move.
+-- AI search algorithm for finding the best move(s).
+-- Also used to determine valid moves for a piece selected by player cursor.
 --
 -- -----------------------------------------------------------------------
 --
@@ -38,6 +39,9 @@
 -- clk             - System clock input
 -- reset           - System reset input
 --
+-- targets_trig    - Trigger search for legal moves of selected piece by player
+-- targets_from    - Location of selected piece by player
+-- targets_found   - Array of valid targets cells found
 --
 -- searching       - High when the search algorithm is active
 -- search_trig     - Start a move search on the board
@@ -65,6 +69,10 @@ entity fpgachess_search is
 	port (
 		clk : in std_logic;
 		reset : in std_logic;
+
+		targets_trig : in std_logic;
+		targets_from : in unsigned(5 downto 0);
+		targets_found : out unsigned(63 downto 0);
 
 		search_start_color : in std_logic;
 		search_start_trig : in std_logic;
@@ -95,7 +103,12 @@ architecture rtl of fpgachess_search is
 
 	signal move_trig_reg : std_logic := '0';
 	signal move_fromto_reg : unsigned(move_fromto'range) := (others => '0');
+
+	signal targets_busy_reg : std_logic := '0';
+	signal targets_found_reg : unsigned(63 downto 0) := (others => '0');
 begin
+	targets_found <= targets_found_reg;
+
 	searching <= searching_reg;
 	search_req <= search_req_reg;
 	search_color <= search_color_reg;
@@ -114,11 +127,29 @@ begin
 				search_color_reg <= search_start_color;
 				search_fromto_reg <= (others => '0');
 			end if;
+			if targets_trig = '1' then
+				targets_busy_reg <= '1';
+				targets_found_reg <= (others => '0');
+				search_req_reg <= not search_req_reg;
+				search_color_reg <= search_start_color;
+				search_fromto_reg <= targets_from & targets_from;
+			end if;
 			if (searching_reg = '1') and (search_req_reg = search_ack) then
 				searching_reg <= '0';
 				if (found_done = '0') then
 					move_trig_reg <= '1';
 					move_fromto_reg <= found_fromto;
+				end if;
+			end if;
+			if (targets_busy_reg = '1') and (search_req_reg = search_ack) then
+				if (found_done = '0') and (found_fromto(11 downto 6) = targets_from) then
+					-- Found valid move for player, store it and continue search for more
+					targets_found_reg(to_integer(found_fromto(5 downto 0))) <= '1';
+					search_req_reg <= not search_req_reg;
+					search_fromto_reg <= found_fromto;
+				else
+					-- No valid moves found (anymore) for current player selection. Abort search for targets
+					targets_busy_reg <= '0';
 				end if;
 			end if;
 		end if;

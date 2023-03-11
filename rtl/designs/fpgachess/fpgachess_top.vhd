@@ -101,6 +101,9 @@ architecture rtl of fpgachess_top is
 	signal cursor_select : std_logic;
 	signal cursor_select_row : unsigned(2 downto 0);
 	signal cursor_select_col : unsigned(2 downto 0);
+	signal cursor_from : unsigned(5 downto 0);
+	signal cursor_to : unsigned(5 downto 0);
+	signal cursor_targets : unsigned(63 downto 0);
 	signal vid_line : unsigned(5 downto 0);
 	signal vid_row : unsigned(2 downto 0);
 	signal vid_col : unsigned(2 downto 0);
@@ -112,6 +115,9 @@ architecture rtl of fpgachess_top is
 	signal vid_move_white : unsigned(11 downto 0);
 	signal vid_move_black : unsigned(11 downto 0);
 begin
+	cursor_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+	cursor_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+
 	board_blk : block
 		signal trig_loc : std_logic;
 		signal move_from : unsigned(5 downto 0);
@@ -150,12 +156,16 @@ begin
 		trig_loc <= move_trig or search_move_trig;
 		move_from <=
 			search_move_fromto(11 downto 6) when search_move_trig = '1' else
-			((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+			cursor_from;
 		move_to <=
 			search_move_fromto(5 downto 0) when search_move_trig = '1' else
-			((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
+			cursor_to;
 	end block;
 
+	search_blk : block
+		signal cursor_select_dly : std_logic := '0';
+		signal targets_trig_reg : std_logic := '0';
+	begin
 	search_inst : entity work.fpgachess_search
 		generic map (
 			ply_count_bits => ply_count_bits,
@@ -165,6 +175,10 @@ begin
 		port map (
 			clk => clk,
 			reset => reset,
+
+			targets_trig => targets_trig_reg,
+			targets_from => cursor_from,
+			targets_found => cursor_targets,
 
 			search_start_color => current_color,
 			search_start_trig => search_start_trig,
@@ -181,6 +195,19 @@ begin
 			move_trig => search_move_trig,
 			move_fromto => search_move_fromto
 		);
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				cursor_select_dly <= cursor_select;
+				targets_trig_reg <= '0';
+
+				if cursor_select > cursor_select_dly then
+					targets_trig_reg <= '1';
+				end if;
+			end if;
+		end process;
+	end block;
 
 	movelist_inst : entity work.fpgachess_movelist
 		generic map (
@@ -263,6 +290,7 @@ begin
 			cursor_select => cursor_select,
 			cursor_select_row => cursor_select_row,
 			cursor_select_col => cursor_select_col,
+			cursor_targets => cursor_targets,
 
 			vid_line => vid_line,
 			vid_row => vid_row,
