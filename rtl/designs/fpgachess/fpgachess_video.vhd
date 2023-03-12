@@ -64,6 +64,8 @@ entity fpgachess_video is
 		vid_col : out unsigned(2 downto 0);
 		piece : in piece_t;
 
+		stats_pos : out unsigned(6 downto 0);
+		stats_digit : in unsigned(3 downto 0);
 		vid_eval : in signed(11 downto 0);
 
 		move_show : in unsigned(1 downto 0);
@@ -186,6 +188,7 @@ begin
 		vid_line <= vga_master.y(9 downto 4);
 		vid_col <= board_col_reg(vid_col'range) xor (white_top & white_top & white_top);
 		vid_row <= (not board_row_reg) xor (white_top & white_top & white_top);
+		stats_pos <= vga_master.x(9 downto 3);
 
 		process(clk)
 		begin
@@ -577,6 +580,10 @@ begin
 					when others =>
 						null;
 					end case;
+				when "11100" =>
+					if stats_digit /= X"F" then
+						current_char_reg <= X"3" & stats_digit;
+					end if;
 				when others =>
 					null;
 				end case;

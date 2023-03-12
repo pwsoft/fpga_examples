@@ -30,6 +30,7 @@ set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_movel
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_pkg.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_popcnt8.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_search.vhd
+set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_stats.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_top.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_ui.vhd
 set_global_assignment -name VHDL_FILE $rtlpath/designs/fpgachess/fpgachess_video.vhd

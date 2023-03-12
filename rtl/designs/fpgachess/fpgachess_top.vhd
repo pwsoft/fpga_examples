@@ -114,6 +114,9 @@ architecture rtl of fpgachess_top is
 	signal vid_move_ply : unsigned(ply_count_bits-1 downto 0);
 	signal vid_move_white : unsigned(11 downto 0);
 	signal vid_move_black : unsigned(11 downto 0);
+
+	signal stats_pos : unsigned(6 downto 0);
+	signal stats_digit : unsigned(3 downto 0);
 begin
 	cursor_from <= ((not cursor_select_row) & cursor_select_col) xor (white_top & white_top & white_top & white_top & white_top & white_top);
 	cursor_to <= ((not cursor_row) & cursor_col(2 downto 0)) xor (white_top & white_top & white_top & white_top & white_top & white_top);
@@ -209,6 +212,38 @@ begin
 		end process;
 	end block;
 
+	stats_blk : block
+		signal search_req_dly : std_logic := '0';
+		signal start_trig_reg : std_logic := '0';
+	begin
+		stats_inst : entity work.fpgachess_stats
+			generic map (
+				-- 14..16 is enough digits for a full year of search (assuming 10M/s)
+				digits => 16
+			)
+			port map (
+				clk => clk,
+				reset => reset,
+
+				start_trig => start_trig_reg,
+				move_trig => search_move_trig,
+
+				vid_pos => stats_pos,
+				vid_digit => stats_digit
+			);
+
+		process(clk)
+		begin
+			if rising_edge(clk) then
+				start_trig_reg <= '0';
+				search_req_dly <= search_req;
+				if search_req /= search_req_dly then
+					start_trig_reg <= '1';
+				end if;
+			end if;
+		end process;
+	end block;
+
 	movelist_inst : entity work.fpgachess_movelist
 		generic map (
 			ply_count_bits => ply_count_bits,
@@ -297,6 +332,8 @@ begin
 			vid_col => vid_col,
 			piece => vid_piece,
 
+			stats_pos => stats_pos,
+			stats_digit => stats_digit,
 			vid_eval => vid_eval,
 
 			move_show => vid_move_show,
