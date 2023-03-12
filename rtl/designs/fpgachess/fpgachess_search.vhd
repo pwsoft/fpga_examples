@@ -84,10 +84,12 @@ entity fpgachess_search is
 		search_color : out std_logic;
 		search_fromto : out unsigned(11 downto 0);
 		found_done : in std_logic;
+		found_promotion : in std_logic;
 		found_fromto : in unsigned(11 downto 0);
 
 		move_trig : out std_logic;
-		move_fromto : out unsigned(11 downto 0)
+		move_fromto : out unsigned(11 downto 0);
+		move_promotion : out piece_t
 	);
 end entity;
 
@@ -103,6 +105,7 @@ architecture rtl of fpgachess_search is
 
 	signal move_trig_reg : std_logic := '0';
 	signal move_fromto_reg : unsigned(move_fromto'range) := (others => '0');
+	signal move_promotion_reg : piece_t := piece_empty;
 
 	signal targets_busy_reg : std_logic := '0';
 	signal targets_found_reg : unsigned(63 downto 0) := (others => '0');
@@ -116,6 +119,7 @@ begin
 
 	move_trig <= move_trig_reg;
 	move_fromto <= move_fromto_reg;
+	move_promotion <= move_promotion_reg;
 
 	process(clk)
 	begin
@@ -139,6 +143,12 @@ begin
 				if (found_done = '0') then
 					move_trig_reg <= '1';
 					move_fromto_reg <= found_fromto;
+					move_promotion_reg <= piece_empty;
+					if found_promotion = '1' then
+						-- TODO, for now always choose queen as promotion piece.
+						-- Should also try rook,bishop and knight when implementing deep search
+						move_promotion_reg <= search_color_reg & piece_queen;
+					end if;
 				end if;
 			end if;
 			if (targets_busy_reg = '1') and (search_req_reg = search_ack) then

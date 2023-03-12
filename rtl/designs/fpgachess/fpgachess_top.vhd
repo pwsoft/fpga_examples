@@ -78,6 +78,7 @@ architecture rtl of fpgachess_top is
 	signal movelist_trig : std_logic;
 	signal movelist_fromto : unsigned(11 downto 0);
 	signal movelist_captured : piece_t;
+	signal movelist_promotion : piece_t;
 
 	signal undo_valid : std_logic;
 	signal undo_fromto : unsigned(11 downto 0);
@@ -91,10 +92,12 @@ architecture rtl of fpgachess_top is
 	signal search_color : std_logic;
 	signal search_fromto : unsigned(11 downto 0);
 	signal found_done : std_logic;
+	signal found_promotion : std_logic;
 	signal found_fromto : unsigned(11 downto 0);
 
 	signal search_move_trig : std_logic;
 	signal search_move_fromto : unsigned(11 downto 0);
+	signal search_move_promotion : piece_t;
 
 	signal cursor_row : unsigned(2 downto 0);
 	signal cursor_col : unsigned(3 downto 0);
@@ -125,6 +128,7 @@ begin
 		signal trig_loc : std_logic;
 		signal move_from : unsigned(5 downto 0);
 		signal move_to : unsigned(5 downto 0);
+		signal move_promotion : piece_t;
 	begin
 		board_inst : entity work.fpgachess_board
 			port map (
@@ -134,6 +138,7 @@ begin
 
 				move_trig => trig_loc,
 				move_fromto => move_from & move_to,
+				move_promotion => move_promotion,
 
 				undo_trig => undo_trig,
 				undo_fromto => undo_fromto,
@@ -144,11 +149,13 @@ begin
 				search_color => search_color,
 				search_fromto => search_fromto,
 				found_done => found_done,
+				found_promotion => found_promotion,
 				found_fromto => found_fromto,
 
 				movelist_trig => movelist_trig,
 				movelist_fromto => movelist_fromto,
 				movelist_captured => movelist_captured,
+				movelist_promotion => movelist_promotion,
 
 				vid_col => vid_col,
 				vid_row => vid_row,
@@ -163,6 +170,9 @@ begin
 		move_to <=
 			search_move_fromto(5 downto 0) when search_move_trig = '1' else
 			cursor_to;
+		move_promotion <=
+			search_move_promotion when search_move_trig = '1' else
+			piece_empty;
 	end block;
 
 	search_blk : block
@@ -193,10 +203,12 @@ begin
 			search_color => search_color,
 			search_fromto => search_fromto,
 			found_done => found_done,
+			found_promotion => found_promotion,
 			found_fromto => found_fromto,
 
 			move_trig => search_move_trig,
-			move_fromto => search_move_fromto
+			move_fromto => search_move_fromto,
+			move_promotion => search_move_promotion
 		);
 
 		process(clk)
@@ -264,6 +276,7 @@ begin
 
 			move_fromto => movelist_fromto,
 			move_captured => movelist_captured,
+			move_promotion => movelist_promotion,
 
 			undo_valid => undo_valid,
 			undo_fromto => undo_fromto,

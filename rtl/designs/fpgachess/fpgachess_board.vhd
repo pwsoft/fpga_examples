@@ -57,6 +57,7 @@ entity fpgachess_board is
 
 		move_trig : in std_logic;
 		move_fromto : in unsigned(11 downto 0);
+		move_promotion : in piece_t;
 		undo_trig : in std_logic;
 		undo_fromto : in unsigned(11 downto 0);
 		undo_captured : in piece_t;
@@ -66,11 +67,13 @@ entity fpgachess_board is
 		search_color : in std_logic;
 		search_fromto : in unsigned(11 downto 0);
 		found_done : out std_logic;
+		found_promotion : out std_logic;
 		found_fromto : out unsigned(11 downto 0);
 
 		movelist_trig : out std_logic;
 		movelist_fromto : out unsigned(11 downto 0);
 		movelist_captured : out piece_t;
+		movelist_promotion : out piece_t;
 
 		vid_row : in unsigned(2 downto 0);
 		vid_col : in unsigned(2 downto 0);
@@ -195,11 +198,13 @@ begin
 		signal fromto_reg : unsigned(11 downto 0);
 		signal movelist_trig_reg : std_logic := '0';
 		signal movelist_fromto_reg : unsigned(movelist_fromto'range) := (others => '0');
-		signal movelist_captured_reg : unsigned(movelist_captured'range) := (others => '0');
+		signal movelist_captured_reg : piece_t := piece_empty;
+		signal movelist_promotion_reg : piece_t := piece_empty;
 	begin
 		movelist_trig <= movelist_trig_reg;
 		movelist_fromto <= movelist_fromto_reg;
 		movelist_captured <= movelist_captured_reg;
+		movelist_promotion <= movelist_promotion_reg;
 
 		process(clk)
 		begin
@@ -219,7 +224,11 @@ begin
 					movelist_trig_reg <= '1';
 					movelist_fromto_reg <= move_fromto;
 					movelist_captured_reg <= to_piece(eval_board_reg(to_integer(move_fromto(5 downto 0))));
+					movelist_promotion_reg <= move_promotion;
 					move_piece_reg <= eval_board_reg(to_integer(move_fromto(11 downto 6)));
+					if move_promotion /= piece_empty then
+						move_piece_reg <= to_extpiece(move_promotion);
+					end if;
 				end if;
 				if move_phase2_reg = '1' then
 					eval_board_reg(to_integer(fromto_reg(5 downto 0))) <= move_piece_reg;
@@ -253,11 +262,13 @@ begin
 		signal search_from_reg : unsigned(6 downto 0) := (others => '0');
 		signal search_to_reg : unsigned(5 downto 0) := (others => '0');
 		signal search_from_incr : unsigned(6 downto 0);
+		signal found_promotion_reg : std_logic;
 	begin
 		search_ack <= search_ack_reg;
 		search_from_incr <= search_from_reg + 1;
 		found_done <= search_from_reg(6);
 		found_fromto <= search_from_reg(5 downto 0) & search_to_reg;
+		found_promotion <= found_promotion_reg;
 
 		process(clk)
 			variable valid : std_logic;
@@ -301,18 +312,27 @@ begin
 								dest := cell+8;
 								if eval_board_reg(to_integer(dest))(4 downto 3) = "00" then
 									valid := '1';
+									if row = 6 then
+										found_promotion_reg <= '1';
+									end if;
 								end if;
 							elsif search_to_reg = cell+8 then
 								-- Capture left
 								dest := cell+7;
 								if (eval_board_reg(to_integer(dest))(3) = '1') and (col /= 0) then
 									valid := '1';
+									if row = 6 then
+										found_promotion_reg <= '1';
+									end if;
 								end if;
 							elsif search_to_reg = cell+7 then
 								-- Capture right
 								dest := cell+9;
 								if (eval_board_reg(to_integer(dest))(3) = '1') and (col /= 7) then
 									valid := '1';
+									if row = 6 then
+										found_promotion_reg <= '1';
+									end if;
 								end if;
 							elsif (search_to_reg = cell+9) and (row = 1) then
 								-- Two spaces forward on row one
@@ -329,21 +349,26 @@ begin
 								dest := cell-8;
 								if eval_board_reg(to_integer(dest))(4 downto 3) = "00" then
 									valid := '1';
+									if row = 1 then
+										found_promotion_reg <= '1';
+									end if;
 								end if;
 							elsif search_to_reg = cell-8 then
 								-- Capture right
 								dest := cell-7;
-								if (col /= 7) then
-									if (eval_board_reg(to_integer(dest))(4) = '1') then
-										valid := '1';
+								if (eval_board_reg(to_integer(dest))(4) = '1') and (col /= 7) then
+									valid := '1';
+									if row = 1 then
+										found_promotion_reg <= '1';
 									end if;
 								end if;
 							elsif search_to_reg = cell-7 then
 								-- Capture left
 								dest := cell-9;
-								if (col /= 0) then
-									if (eval_board_reg(to_integer(dest))(4) = '1') then
-										valid := '1';
+								if (eval_board_reg(to_integer(dest))(4) = '1') and (col /= 0) then
+									valid := '1';
+									if row = 1 then
+										found_promotion_reg <= '1';
 									end if;
 								end if;
 							elsif (search_to_reg = cell-9) and (row = 6) then
@@ -538,6 +563,7 @@ begin
 					search_check_reg <= '0';
 					search_from_reg <= "0" & search_fromto(11 downto 6);
 					search_to_reg <= search_fromto(5 downto 0);
+					found_promotion_reg <= '0';
 				end if;
 			end if;
 		end process;

@@ -63,6 +63,7 @@ entity fpgachess_movelist is
 
 		move_fromto : in unsigned(11 downto 0);
 		move_captured : in piece_t;
+		move_promotion : in piece_t;
 
 		undo_valid : out std_logic;
 		undo_fromto : out unsigned(11 downto 0);
