@@ -74,22 +74,16 @@ entity fpgachess_board is
 		movelist_trig : out std_logic;
 		movelist_fromto : out unsigned(11 downto 0);
 		movelist_captured : out piece_t;
-		movelist_promotion : out piece_t;
-
-		vid_eval : out signed(11 downto 0)
+		movelist_promotion : out piece_t
 	);
 end entity;
 
 -- -----------------------------------------------------------------------
 
 architecture rtl of fpgachess_board is
-	constant eval_sum_bits : integer := 12;
-	constant eval_part_bits : integer := 8;
 
 	signal busy_reg : std_logic := '0';
 
-	type eval_cells_t is array(0 to 63) of signed(eval_part_bits-1 downto 0);
-	type eval_sum_t is array(0 to 7) of signed(eval_sum_bits-1 downto 0);
 
 	constant init_board : extboard_t :=  (
 			ext_wrook, ext_wknight, ext_wbishop, ext_wqueen, ext_wking, ext_wbishop, ext_wknight, ext_wrook,
@@ -102,9 +96,6 @@ architecture rtl of fpgachess_board is
 			ext_brook, ext_bknight, ext_bbishop, ext_bqueen, ext_bking, ext_bbishop, ext_bknight, ext_brook
 		);
 	signal eval_board_reg : extboard_t := init_board;
-	signal eval_cells_reg : eval_cells_t := (others => (others => '0'));
-	signal eval_row_sum_reg : eval_sum_t := (others => (others => '0'));
-	signal eval_sum_reg : signed(eval_sum_bits-1 downto 0) := (others => '0');
 
 	signal move_piece_reg : extpiece_t := ext_empty;
 	signal move_phase2_reg : std_logic := '0';
@@ -114,79 +105,6 @@ begin
 	busy <= busy_reg;
 	board <= eval_board_reg;
 	board_display_trig <= update_display_reg;
-	vid_eval <= eval_sum_reg;
-
-	eval_block : block
-		-- Check if there are files with pawns of only one color
-		signal wpawn_in_file_reg : unsigned(0 to 7) := (others => '0');
-		signal bpawn_in_file_reg : unsigned(0 to 7) := (others => '0');
-		signal wpawn_sum : unsigned(3 downto 0) := (others => '0');
-		signal bpawn_sum : unsigned(3 downto 0) := (others => '0');
-		signal pawn_sum_reg : signed(4 downto 0) := (others => '0');
-	begin
-		popcnt8_wpawn_inst : entity work.fpgachess_popcnt8
-			port map (
-				d => wpawn_in_file_reg,
-				q => wpawn_sum
-			);
-		popcnt8_bpawn_inst : entity work.fpgachess_popcnt8
-			port map (
-				d => bpawn_in_file_reg,
-				q => bpawn_sum
-			);
-
-
-		process(clk)
-			variable row_sum : signed(eval_sum_bits-1 downto 0);
---			variable pawn_sum : signed(pawn_sum_reg'range);
-			variable sum : signed(eval_sum_bits-1 downto 0);
-
-		begin
-			if rising_edge(clk) then
-				wpawn_in_file_reg <= (others => '0');
-				bpawn_in_file_reg <= (others => '0');
-				for cell in 0 to 63 loop
-					case to_piece(eval_board_reg(cell)) is
-					when piece_white & piece_pawn =>
-						eval_cells_reg(cell) <= to_signed(10, eval_part_bits);
-						wpawn_in_file_reg(cell mod 8) <= '1';
-					when piece_white & piece_bishop => eval_cells_reg(cell) <= to_signed(30, eval_part_bits);
-					when piece_white & piece_knight => eval_cells_reg(cell) <= to_signed(30, eval_part_bits);
-					when piece_white & piece_rook => eval_cells_reg(cell) <= to_signed(50, eval_part_bits);
-					when piece_white & piece_queen => eval_cells_reg(cell) <= to_signed(70, eval_part_bits);
-					when piece_white & piece_king => eval_cells_reg(cell) <= to_signed(100, eval_part_bits);
-					when piece_black & piece_pawn =>
-						eval_cells_reg(cell) <= to_signed(-10, eval_part_bits);
-						bpawn_in_file_reg(cell mod 8) <= '1';
-					when piece_black & piece_bishop => eval_cells_reg(cell) <= to_signed(-30, eval_part_bits);
-					when piece_black & piece_knight => eval_cells_reg(cell) <= to_signed(-30, eval_part_bits);
-					when piece_black & piece_rook => eval_cells_reg(cell) <= to_signed(-50, eval_part_bits);
-					when piece_black & piece_queen => eval_cells_reg(cell) <= to_signed(-70, eval_part_bits);
-					when piece_black & piece_king => eval_cells_reg(cell) <= to_signed(-100, eval_part_bits);
-					when others =>
-						eval_cells_reg(cell) <= (others => '0');
-					end case;
-				end loop;
-
-				for row in 0 to 7 loop
-					row_sum := (others => '0');
-					for col in 0 to 7 loop
-						row_sum := row_sum + resize(eval_cells_reg(row*8+col), eval_sum_bits);
-					end loop;
-					eval_row_sum_reg(row) <= row_sum;
-				end loop;
-
-				pawn_sum_reg <= "00000" + to_integer(wpawn_sum) - to_integer(bpawn_sum);
-
-				sum := (others => '0');
-				sum := sum + resize(pawn_sum_reg, eval_sum_bits);
-				for row in 0 to 7 loop
-					sum := sum + eval_row_sum_reg(row);
-				end loop;
-				eval_sum_reg <= sum;
-			end if;
-		end process;
-	end block;
 
 	move_blk : block
 		signal fromto_reg : unsigned(11 downto 0);
@@ -448,11 +366,13 @@ begin
 						when piece_white & piece_rook | piece_black & piece_rook =>
 							if search_to_reg = search_from_reg then
 								if (col /= 7) then
+									-- Check right
 									dest := cell+1;
 									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
 										valid := '1';
 									end if;
 								else
+									-- Check left
 									dest := cell-1;
 									if ((eval_board_reg(to_integer(dest))(4) = search_color) or (eval_board_reg(to_integer(dest))(4 downto 3) = "00")) then
 										valid := '1';

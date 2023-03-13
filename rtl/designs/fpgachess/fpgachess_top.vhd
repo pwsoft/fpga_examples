@@ -33,7 +33,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.video_pkg.all;
 use work.fpgachess_pkg.all;
 
 -- -----------------------------------------------------------------------
@@ -163,9 +162,7 @@ begin
 				movelist_trig => movelist_trig,
 				movelist_fromto => movelist_fromto,
 				movelist_captured => movelist_captured,
-				movelist_promotion => movelist_promotion,
-
-				vid_eval => vid_eval
+				movelist_promotion => movelist_promotion
 			);
 		trig_loc <= move_trig or search_move_trig;
 		move_from <=
@@ -178,6 +175,17 @@ begin
 			search_move_promotion when search_move_trig = '1' else
 			piece_empty;
 	end block;
+
+	eval_inst : entity work.fpgachess_eval
+		port map (
+			clk => clk,
+
+			board => board,
+
+			eval_req => search_req, -- TODO is wrong signal, but will trigger as side effect of search for testing.
+			eval_ack => open,
+			eval_score => vid_eval
+		);
 
 	search_blk : block
 		signal cursor_select_dly : std_logic := '0';
