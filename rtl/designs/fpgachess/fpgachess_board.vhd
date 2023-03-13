@@ -61,6 +61,7 @@ entity fpgachess_board is
 		undo_trig : in std_logic;
 		undo_fromto : in unsigned(11 downto 0);
 		undo_captured : in piece_t;
+		undo_promotion : in piece_t;
 
 		search_req : in std_logic;
 		search_ack : out std_logic;
@@ -239,6 +240,9 @@ begin
 					undo_phase2_reg <= '1';
 					fromto_reg <= undo_fromto;
 					move_piece_reg <= eval_board_reg(to_integer(undo_fromto(5 downto 0)));
+					if undo_promotion /= piece_empty then
+						move_piece_reg(2 downto 0) <= piece_pawn;
+					end if;
 				end if;
 				if undo_phase2_reg = '1' then
 					eval_board_reg(to_integer(fromto_reg(5 downto 0))) <= to_extpiece(undo_captured);

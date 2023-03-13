@@ -68,6 +68,7 @@ entity fpgachess_movelist is
 		undo_valid : out std_logic;
 		undo_fromto : out unsigned(11 downto 0);
 		undo_captured : out piece_t;
+		undo_promotion : out piece_t;
 		redo_valid : out std_logic;
 		redo_fromto : out unsigned(11 downto 0);
 
@@ -86,14 +87,18 @@ architecture rtl of fpgachess_movelist is
 	constant storage_bits : integer := ply_count_bits+1;
 	type moves_t is array(0 to (2**storage_bits)-1) of unsigned(11 downto 0);
 	type captures_t is array(0 to (2**storage_bits)-1) of piece_t;
+	type promotions_t is array(0 to (2**storage_bits)-1) of piece_t;
 	signal moves_reg : moves_t := (others => (others => '0'));
 	signal captures_reg : captures_t := (others => (others => '0'));
+	signal promotions_reg : promotions_t := (others => (others => '0'));
 	signal readout_fromto_reg : unsigned(11 downto 0) := (others => '0');
 	signal readout_captured_reg : piece_t := piece_empty;
+	signal readout_promotion_reg : piece_t := piece_empty;
 
 	signal undo_valid_reg : std_logic := '0';
 	signal undo_fromto_reg : unsigned(11 downto 0) := (others => '0');
 	signal undo_captured_reg : piece_t := piece_empty;
+	signal undo_promotion_reg : piece_t := piece_empty;
 	signal redo_valid_reg : std_logic := '0';
 	signal redo_fromto_reg : unsigned(11 downto 0) := (others => '0');
 
@@ -113,6 +118,7 @@ begin
 	undo_valid <= undo_valid_reg;
 	undo_fromto <= undo_fromto_reg;
 	undo_captured <= undo_captured_reg;
+	undo_promotion <= undo_promotion_reg;
 	redo_valid <= '0'; --redo_valid_reg;
 	redo_fromto <= redo_fromto_reg;
 
@@ -136,9 +142,11 @@ begin
 				if we_reg = '1' then
 					moves_reg(to_integer(addr_reg)) <= fromto_reg;
 					captures_reg(to_integer(addr_reg)) <= move_captured;
+					promotions_reg(to_integer(addr_reg)) <= move_promotion;
 				else
 					readout_fromto_reg <= moves_reg(to_integer(addr_reg));
 					readout_captured_reg <= captures_reg(to_integer(addr_reg));
+					readout_promotion_reg <= promotions_reg(to_integer(addr_reg));
 				end if;
 			end if;
 		end process;
@@ -172,6 +180,7 @@ begin
 					addr_reg(addr_reg'high) <= '0';
 					undo_fromto_reg <= move_fromto;
 					undo_captured_reg <= move_captured;
+					undo_promotion_reg <= move_promotion;
 				elsif undo_update_reg = '1' then
 					undo_valid_reg <= '0';
 					addr_reg(ply_count_bits-1 downto 0) <= current_pos_reg(ply_count_bits-1 downto 0)-1;
@@ -194,6 +203,7 @@ begin
 					undo_valid_reg <= '1';
 					undo_fromto_reg <= readout_fromto_reg;
 					undo_captured_reg <= readout_captured_reg;
+					undo_promotion_reg <= readout_promotion_reg;
 				end if;
 			end if;
 		end process;

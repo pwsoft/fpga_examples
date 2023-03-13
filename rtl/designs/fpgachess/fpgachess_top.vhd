@@ -83,6 +83,7 @@ architecture rtl of fpgachess_top is
 	signal undo_valid : std_logic;
 	signal undo_fromto : unsigned(11 downto 0);
 	signal undo_captured : piece_t;
+	signal undo_promotion : piece_t;
 	signal redo_valid : std_logic;
 	signal redo_fromto : unsigned(11 downto 0);
 
@@ -143,6 +144,7 @@ begin
 				undo_trig => undo_trig,
 				undo_fromto => undo_fromto,
 				undo_captured => undo_captured,
+				undo_promotion => undo_promotion,
 
 				search_req => search_req,
 				search_ack => search_ack,
@@ -281,6 +283,7 @@ begin
 			undo_valid => undo_valid,
 			undo_fromto => undo_fromto,
 			undo_captured => undo_captured,
+			undo_promotion => undo_promotion,
 			redo_valid => redo_valid,
 			redo_fromto => redo_fromto,
 
