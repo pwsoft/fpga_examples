@@ -66,6 +66,9 @@ architecture rtl of fpgachess_top is
 	constant top_move_bits : integer := 8;
 	constant eval_score_bits : integer := 12;
 
+	signal board : extboard_t;
+	signal board_display_trig : std_logic;
+
 	signal new_game_trig : std_logic;
 	signal search_start_trig : std_logic;
 	signal white_top : std_logic;
@@ -135,6 +138,9 @@ begin
 			port map (
 				clk => clk,
 
+				board => board,
+				board_display_trig => board_display_trig,
+
 				new_game_trig => new_game_trig,
 
 				move_trig => trig_loc,
@@ -158,10 +164,6 @@ begin
 				movelist_fromto => movelist_fromto,
 				movelist_captured => movelist_captured,
 				movelist_promotion => movelist_promotion,
-
-				vid_col => vid_col,
-				vid_row => vid_row,
-				vid_piece => vid_piece,
 
 				vid_eval => vid_eval
 			);
@@ -321,6 +323,18 @@ begin
 			cursor_select => cursor_select,
 			cursor_select_row => cursor_select_row,
 			cursor_select_col => cursor_select_col
+		);
+
+	board_display_inst : entity work.fpgachess_board_display
+		port map (
+			clk => clk,
+
+			board => board,
+			board_trig => board_display_trig,
+
+			vid_col => vid_col,
+			vid_row => vid_row,
+			vid_piece => vid_piece
 		);
 
 	video_inst : entity work.fpgachess_video

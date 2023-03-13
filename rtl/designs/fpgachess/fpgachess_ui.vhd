@@ -195,6 +195,7 @@ begin
 		end process;
 
 		process(clk)
+			variable cursor_rowcol : unsigned(6 downto 0);
 		begin
 			if rising_edge(clk) then
 				new_game_trig_reg <= '0';
@@ -224,7 +225,8 @@ begin
 						select_reg <= '0';
 					end if;
 
-					case cursor_row_reg & cursor_col_reg is
+					cursor_rowcol := cursor_row_reg & cursor_col_reg;
+					case cursor_rowcol is
 					when "0001000" => -- New game
 						new_game_trig_reg <= '1';
 					when "0011000" => -- TBD trigger search

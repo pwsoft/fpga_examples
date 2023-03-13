@@ -36,9 +36,6 @@
 -- found_done      - High when no new move have been found on the board
 -- found_fromto    - Coordinate and target of the found move on the board
 --
--- vid_row   - Board row currently displayed by the video subsystem
--- vid_col   - Board column currently displayed by the video subsystem
--- vid_piece - Returns piece located on cell pointed to by vid_row and vid_col
 -- -----------------------------------------------------------------------
 
 library ieee;
@@ -52,6 +49,9 @@ entity fpgachess_board is
 	port (
 		clk : in std_logic;
 		busy : out std_logic;
+
+		board : out extboard_t;
+		board_display_trig : out std_logic;
 
 		new_game_trig : in std_logic;
 
@@ -76,10 +76,6 @@ entity fpgachess_board is
 		movelist_captured : out piece_t;
 		movelist_promotion : out piece_t;
 
-		vid_row : in unsigned(2 downto 0);
-		vid_col : in unsigned(2 downto 0);
-		vid_piece : out piece_t;
-
 		vid_eval : out signed(11 downto 0)
 	);
 end entity;
@@ -91,10 +87,7 @@ architecture rtl of fpgachess_board is
 	constant eval_part_bits : integer := 8;
 
 	signal busy_reg : std_logic := '0';
-	signal vid_piece_reg : piece_t := (others => '0');
 
-	type board_t is array(0 to 63) of piece_t;
-	type extboard_t is array(0 to 63) of extpiece_t;
 	type eval_cells_t is array(0 to 63) of signed(eval_part_bits-1 downto 0);
 	type eval_sum_t is array(0 to 7) of signed(eval_sum_bits-1 downto 0);
 
@@ -108,7 +101,6 @@ architecture rtl of fpgachess_board is
 			ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn, ext_bpawn,
 			ext_brook, ext_bknight, ext_bbishop, ext_bqueen, ext_bking, ext_bbishop, ext_bknight, ext_brook
 		);
-	signal display_board_reg : board_t := (others => piece_empty);
 	signal eval_board_reg : extboard_t := init_board;
 	signal eval_cells_reg : eval_cells_t := (others => (others => '0'));
 	signal eval_row_sum_reg : eval_sum_t := (others => (others => '0'));
@@ -120,7 +112,8 @@ architecture rtl of fpgachess_board is
 	signal update_display_reg : std_logic := '0';
 begin
 	busy <= busy_reg;
-	vid_piece <= vid_piece_reg;
+	board <= eval_board_reg;
+	board_display_trig <= update_display_reg;
 	vid_eval <= eval_sum_reg;
 
 	eval_block : block
@@ -569,59 +562,6 @@ begin
 					search_to_reg <= search_fromto(5 downto 0);
 					found_promotion_reg <= '0';
 				end if;
-			end if;
-		end process;
-	end block;
-
-	display_blk : block
-		signal display_col0_reg : piece_t := piece_empty;
-		signal display_col1_reg : piece_t := piece_empty;
-		signal display_col2_reg : piece_t := piece_empty;
-		signal display_col3_reg : piece_t := piece_empty;
-		signal display_col4_reg : piece_t := piece_empty;
-		signal display_col5_reg : piece_t := piece_empty;
-		signal display_col6_reg : piece_t := piece_empty;
-		signal display_col7_reg : piece_t := piece_empty;
-	begin
-		process(clk)
-		begin
-			if rising_edge(clk) then
-				if update_display_reg = '1' then
-					for i in 0 to 63 loop
-						display_board_reg(i) <= to_piece(eval_board_reg(i));
-					end loop;
-				end if;
-			end if;
-		end process;
-
-		process(clk)
-		begin
-			if rising_edge(clk) then
-				-- Select a single cell from the display board and send it to the video logic.
-				-- Multiplexing 64 squares into one output makes the logic large.
-				-- So it is done in two separate steps. First for the current row all
-				-- the columns are collected. Then the selection of a specific column is made.
-				-- This reduces the mux sizes from 64 to 8 making it easier to meet timing.
-				--
-				display_col0_reg <= display_board_reg(to_integer(vid_row & "000"));
-				display_col1_reg <= display_board_reg(to_integer(vid_row & "001"));
-				display_col2_reg <= display_board_reg(to_integer(vid_row & "010"));
-				display_col3_reg <= display_board_reg(to_integer(vid_row & "011"));
-				display_col4_reg <= display_board_reg(to_integer(vid_row & "100"));
-				display_col5_reg <= display_board_reg(to_integer(vid_row & "101"));
-				display_col6_reg <= display_board_reg(to_integer(vid_row & "110"));
-				display_col7_reg <= display_board_reg(to_integer(vid_row & "111"));
-
-				case vid_col is
-				when "000" => vid_piece_reg <= display_col0_reg;
-				when "001" => vid_piece_reg <= display_col1_reg;
-				when "010" => vid_piece_reg <= display_col2_reg;
-				when "011" => vid_piece_reg <= display_col3_reg;
-				when "100" => vid_piece_reg <= display_col4_reg;
-				when "101" => vid_piece_reg <= display_col5_reg;
-				when "110" => vid_piece_reg <= display_col6_reg;
-				when others => vid_piece_reg <= display_col7_reg;
-				end case;
 			end if;
 		end process;
 	end block;

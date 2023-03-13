@@ -60,6 +60,9 @@ package fpgachess_pkg is
 	constant ext_bqueen  : unsigned(4 downto 0) := "01101";
 	constant ext_bking   : unsigned(4 downto 0) := "01110";
 
+	type board_t is array(0 to 63) of piece_t;
+	type extboard_t is array(0 to 63) of extpiece_t;
+
 	function to_piece(p : in extpiece_t) return piece_t;
 	function to_extpiece(p : in piece_t) return extpiece_t;
 end package;
